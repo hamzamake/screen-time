@@ -167,6 +167,11 @@ table.data td:last-child,table.data th:last-child{text-align:right;font-variant-
 .dlg-body label.setting input{margin-top:4px;width:16px;height:16px;flex:none}
 .dlg-body label.setting b{display:block;color:var(--ink);font-weight:600}
 .dlg-body label.setting small{display:block;color:var(--muted);font-size:12.5px;margin-top:2px}
+.dlg-body .sel-row{display:grid;grid-template-columns:auto 1fr;gap:8px 12px;align-items:center;margin:0 0 14px}
+.dlg-body .sel-row.sub-opt{margin:-6px 0 14px 28px}
+.dlg-body .sel-row label{margin:0;font-weight:560}
+.dlg-body select:disabled{opacity:.5}
+.dlg-body .upd-status{font-size:12.5px;margin:0 0 8px}
 @media (max-width:520px){.hrow{grid-template-columns:110px 1fr 62px;gap:8px}}
 
 /* browser trackers */
@@ -1224,17 +1229,27 @@ async function openSettings() {
         <span><b>Keep counting while the app plays sound</b><small>Watching a video or sitting on a call without touching the mouse still counts as usage.</small></span></label>
       <label class="setting"><input type="checkbox" id="sAuto"${st.autoStart ? ' checked' : ''}>
         <span><b>Start with Windows</b><small>Start tracking automatically when you sign in.</small></span></label>
-      <label class="setting"><input type="checkbox" id="sUpd"${st.autoUpdate ? ' checked' : ''}>
-        <span><b>Install updates automatically</b><small>New versions install in the background and Screen Time restarts within a few seconds. Your history is kept. When this is off, you're asked first.</small></span></label>
       <label for="sIdle">Idle timeout</label>
       <select id="sIdle">${[1, 2, 3, 5, 10, 15, 30].map(opt).join('')}</select>
       <p style="margin-top:6px;font-size:12.5px">After this long without mouse or keyboard input you count as away, and that time isn't counted as usage.</p>
       <label>Browser trackers</label>
       <p style="font-size:12.5px;margin:0 0 8px">Group your browsers and profiles (e.g. Work, Personal) and choose what counts toward “All Time”.</p>
       <button type="button" class="btn" id="sTrackers">Manage browser trackers…</button>
-      <label>Updates</label>
-      <p style="font-size:12.5px;margin:0 0 8px" id="sUpdText">${esc(updateText(state.now && state.now.update))}</p>
-      <button type="button" class="btn" id="sCheck">Check for updates</button>
+      <h4>Updates</h4>
+      <label class="setting"><input type="checkbox" id="sUpdCheck"${st.updateCheck ? ' checked' : ''}>
+        <span><b>Check for updates automatically</b><small>Looks at Screen Time's releases on GitHub. Nothing about you is sent.</small></span></label>
+      <div class="sub-opt sel-row"><label for="sUpdHours">How often</label>
+        <select id="sUpdHours"${st.updateCheck ? '' : ' disabled'}>${UPDATE_HOURS.map(([h, t]) => `<option value="${h}"${h === st.updateHours ? ' selected' : ''}>${t}</option>`).join('')}</select></div>
+      <div class="sel-row"><label for="sUpdMode">When there's a new version</label>
+        <select id="sUpdMode"><option value="auto"${st.autoUpdate ? ' selected' : ''}>Install it automatically</option><option value="ask"${st.autoUpdate ? '' : ' selected'}>Ask me first</option></select>
+        <label for="sUpdWhen">Install it</label>
+        <select id="sUpdWhen"${st.autoUpdate ? '' : ' disabled'}><option value="now"${st.updateWhen === 'now' ? ' selected' : ''}>Right away (Screen Time restarts in a few seconds)</option><option value="away"${st.updateWhen === 'away' ? ' selected' : ''}>Only when I'm away from the PC (idle or locked)</option></select></div>
+      <label class="setting"><input type="checkbox" id="sUpdBeta"${st.updatePrerelease ? ' checked' : ''}>
+        <span><b>Include beta versions</b><small>Also get releases marked as pre-release on GitHub. They're newer but may be less stable.</small></span></label>
+      <label class="setting"><input type="checkbox" id="sUpdNotify"${st.updateNotify ? ' checked' : ''}>
+        <span><b>Show notifications about updates</b><small>“Update available”, “Screen Time was updated” and “Update failed” from the tray icon. Checking by hand always tells you the result.</small></span></label>
+      <p class="upd-status" id="sUpdText"></p>
+      <div class="inline"><button type="button" class="btn" id="sCheck">Check for updates now</button><button type="button" class="btn" id="sUnskip" hidden></button></div>
       <p class="dlg-error" id="sErr" hidden></p>`,
     actions: [{ label: 'Done', primary: true }],
   });
@@ -1246,14 +1261,27 @@ async function openSettings() {
   $('sMedia').onchange = e => save({ countMedia: e.target.checked });
   $('sAuto').onchange = e => save({ autoStart: e.target.checked });
   $('sIdle').onchange = e => save({ idleMinutes: +e.target.value });
-  $('sUpd').onchange = e => save({ autoUpdate: e.target.checked });
+  $('sUpdCheck').onchange = e => { $('sUpdHours').disabled = !e.target.checked; save({ updateCheck: e.target.checked }); };
+  $('sUpdHours').onchange = e => save({ updateHours: +e.target.value });
+  $('sUpdMode').onchange = e => { const auto = e.target.value === 'auto'; $('sUpdWhen').disabled = !auto; save({ autoUpdate: auto }); };
+  $('sUpdWhen').onchange = e => save({ updateWhen: e.target.value });
+  $('sUpdBeta').onchange = e => save({ updatePrerelease: e.target.checked });
+  $('sUpdNotify').onchange = e => save({ updateNotify: e.target.checked });
+  const showUpd = u => {
+    if (!$('sUpdText')) return;
+    $('sUpdText').textContent = updateText(u);
+    const skip = u && u.skip;
+    $('sUnskip').hidden = !skip;
+    if (skip) $('sUnskip').textContent = `Stop skipping version ${skip}`;
+  };
+  showUpd(state.now && state.now.update);
   $('sTrackers').onclick = () => openTrackers();
   $('sCheck').onclick = async () => {
     $('sCheck').disabled = true;
-    const u = await checkUpdates();
-    if ($('sUpdText')) $('sUpdText').textContent = updateText(u);
+    showUpd(await checkUpdates());
     if ($('sCheck')) $('sCheck').disabled = false;
   };
+  $('sUnskip').onclick = async () => showUpd(await updateAction('unskip'));
   await shown;
   loadNow();
   load();
@@ -1262,12 +1290,17 @@ $('settingsBtn').onclick = openSettings;
 $('manageTrackers').onclick = openTrackers;
 
 // ---- updates ----
+const UPDATE_HOURS = [[1, 'Every hour'], [6, 'Every 6 hours'], [12, 'Every 12 hours'], [24, 'Once a day'], [168, 'Once a week']];
+
 function updateText(u) {
   if (!u) return '';
+  const beta = u.prerelease ? ' (beta)' : '';
   const last = u.lastCheck ? ' Last checked ' + new Date(u.lastCheck).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) + '.' : '';
   switch (u.state) {
     case 'checking': return 'Checking for updates…';
-    case 'available': return `Version ${u.latest} is available (you have ${u.current}).`;
+    case 'available': return u.skipped ? `Version ${u.latest}${beta} is available, but you chose to skip it.`
+      : `Version ${u.latest}${beta} is available (you have ${u.current}).`;
+    case 'ready': return `Version ${u.latest}${beta} is downloaded and installs the next time you're away from the PC.`;
     case 'downloading': return `Downloading Screen Time ${u.latest}… ${u.percent || 0}%`;
     case 'installing': return 'Installing the update. Screen Time restarts in a few seconds and this page reloads.';
     case 'failed': return (u.error || 'The update check failed.') + last;
@@ -1280,7 +1313,7 @@ function renderUpdate(u) {
   const b = $('updBanner');
   const dismissed = u && u.latest && ls.get('st.updLater') === u.latest;
   const show = !!u && (u.state === 'downloading' || u.state === 'installing'
-    || (!!u.latest && (u.state === 'available' || u.state === 'failed') && !dismissed));
+    || (!!u.latest && (u.state === 'available' || u.state === 'ready' || u.state === 'failed') && !dismissed && !u.skipped));
   b.hidden = !show;
   b.classList.toggle('bad', show && u.state === 'failed');
   if (!show) { b.dataset.k = ''; return; }
@@ -1291,15 +1324,18 @@ function renderUpdate(u) {
     b.innerHTML = `<span class="spinner"></span><span class="msg">${esc(updateText(u))}</span>`;
     return;
   }
-  b.innerHTML = `<span class="msg">${u.state === 'failed'
-      ? `<b>Couldn't install Screen Time ${esc(u.latest)}.</b> ${esc(u.error || '')}`
-      : `<b>Screen Time ${esc(u.latest)} is available.</b> You have ${esc(u.current)}. Your history is kept.`}</span>
+  const name = `Screen Time ${esc(u.latest)}${u.prerelease ? ' (beta)' : ''}`;
+  b.innerHTML = `<span class="msg">${u.state === 'failed' ? `<b>Couldn't install ${name}.</b> ${esc(u.error || '')}`
+      : u.state === 'ready' ? `<b>${name} is downloaded.</b> It installs the next time you're away from the PC.`
+      : `<b>${name} is available.</b> You have ${esc(u.current)}. Your history is kept.`}</span>
     <span class="acts"><button class="btn" id="updNotes">What's new</button>
-    <button class="btn primary" id="updInstall">${u.state === 'failed' ? 'Try again' : 'Update now'}</button>
-    <button class="btn" id="updLater">Later</button></span>`;
+    <button class="btn primary" id="updInstall">${u.state === 'failed' ? 'Try again' : u.state === 'ready' ? 'Install now' : 'Update now'}</button>
+    <button class="btn" id="updSkip" title="Don't install or announce this version">Skip this version</button>
+    ${u.state === 'ready' ? '' : '<button class="btn" id="updLater" title="Hide this until the next version">Later</button>'}</span>`;
   $('updNotes').onclick = () => showNotes(u);
   $('updInstall').onclick = () => updateAction('install');
-  $('updLater').onclick = () => { ls.set('st.updLater', u.latest); renderUpdate(u); };
+  $('updSkip').onclick = () => updateAction('skip');
+  if ($('updLater')) $('updLater').onclick = () => { ls.set('st.updLater', u.latest); renderUpdate(u); };
 }
 
 function showNotes(u) {
@@ -1336,8 +1372,9 @@ $('checkUpdates').onclick = async () => {
   btn.disabled = true; btn.textContent = 'Checking…';
   const u = await checkUpdates();
   btn.disabled = false; btn.textContent = 'Check for updates';
-  if (u && u.state !== 'available' && u.state !== 'downloading' && u.state !== 'installing')
-    alertBox(u.state === 'failed' ? "Couldn't check for updates" : 'No updates', updateText(u));
+  // The banner covers a version that's waiting; otherwise answer here.
+  if (u && (u.skipped || !['available', 'ready', 'downloading', 'installing'].includes(u.state)))
+    alertBox(u.state === 'failed' ? "Couldn't check for updates" : u.skipped ? 'Skipped update' : 'No updates', updateText(u));
 };
 
 // ---- pause ----

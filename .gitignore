@@ -1,0 +1,9 @@
+# Personal notes (not part of the repo)
+CLAUDE.md
+HOW-TO-RELEASE.md
+
+# Build output (the setup goes out as a GitHub release asset, not in the repo)
+build/
+dist/
+bin/
+obj/

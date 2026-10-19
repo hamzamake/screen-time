@@ -40,9 +40,9 @@ Other browsers keep using the guided steps.
 
 ## Updates
 
-Every installed Screen Time checks the latest GitHub release of the repo in `Updater.Repo`
-(`ScreenTime\Updater.cs`, currently `hamzamake/screen-time`) 2 minutes after it starts and then every 6 hours.
-If the release tag (`v1.5.0`) is a higher version and the release has `ScreenTime-Setup.exe` attached, it:
+Every installed Screen Time checks the GitHub releases of the repo in `Updater.Repo`
+(`ScreenTime\Updater.cs`, currently `hamzamake/screen-time`), by default every 6 hours. If a release tag
+(`v1.5.0`) is a higher version and the release has `ScreenTime-Setup.exe` attached, it (by default):
 
 1. downloads the setup to `%TEMP%\ScreenTime-Update` and checks it (size, GitHub's SHA-256 digest, and that it
    really is the Screen Time setup for that version),
@@ -58,9 +58,22 @@ with the usual idle rule (if you're away, they're dropped). It also knows your b
 of waiting for the extension's next check-in. Only an update restart does this; quitting with **Exit** stops
 tracking as before.
 
-Users can turn off **Settings → Install updates automatically**. Then they get a notification and a banner in
-the dashboard (**What's new** / **Update now** / **Later**) instead. **Check for updates** is in the tray menu, in
-Settings and at the bottom of the dashboard. Drafts and pre-releases are never offered.
+Everything about it is configurable in **Settings → Updates**:
+
+| Setting | Options (default first) |
+|---|---|
+| Check for updates automatically | on / off (checking by hand always works) |
+| How often | every 6 hours / every hour / every 12 hours / once a day / once a week |
+| When there's a new version | install it automatically / ask me first |
+| Install it | right away / only when I'm away from the PC (idle or locked) |
+| Include beta versions | off / on (releases marked "pre-release" on GitHub) |
+| Show notifications about updates | on / off |
+
+The schedule survives restarts (it remembers when it last checked). With "only when I'm away", the update is
+downloaded right away and installed the next time you're idle or lock the PC. With "ask me first" you get a
+notification and a banner in the dashboard: **What's new** / **Update now** / **Skip this version** / **Later**.
+A skipped version is never installed or announced automatically; **Stop skipping** is in Settings. **Check for
+updates** is in the tray menu, in Settings and at the bottom of the dashboard. Drafts are never offered.
 
 The browser extension's files are replaced too. An unpacked ("Load unpacked") extension reloads itself once it
 sees the app's new version; a store install updates through its store.
@@ -77,7 +90,8 @@ powershell -ExecutionPolicy Bypass -File release.ps1 -Version 1.5.0 -Notes "What
 ```
 
 It builds `dist\ScreenTime-Setup.exe` for that version and creates release `v1.5.0` with the setup attached
-(`-NotesFile notes.md` for longer notes, `-Draft` to review it on GitHub first). The version must be higher
+(`-NotesFile notes.md` for longer notes, `-Draft` to review it on GitHub first, `-Prerelease` for a beta that
+only reaches people with "Include beta versions" on; give the final release a higher version than the beta). The version must be higher
 than the last release. Doing it by hand works too: `build.ps1 -Version 1.5.0`, then create a release tagged
 `v1.5.0` on GitHub and attach `dist\ScreenTime-Setup.exe` with exactly that name.
 

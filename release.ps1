@@ -5,6 +5,9 @@
 #   powershell -ExecutionPolicy Bypass -File release.ps1 -Version 1.5.0 -Notes "Fixed X, added Y"
 #   powershell -ExecutionPolicy Bypass -File release.ps1 -Version 1.5.0 -NotesFile notes.md
 #   powershell -ExecutionPolicy Bypass -File release.ps1 -Version 1.5.0 -Draft    (publish it yourself later)
+#   powershell -ExecutionPolicy Bypass -File release.ps1 -Version 1.5.0 -Prerelease
+#       a beta: only offered to people who turned on "Include beta versions". Give the final release a higher
+#       version (e.g. 1.5.1), since people on the beta already have 1.5.0.
 #
 # Needs the GitHub CLI (gh), logged in, and the repo named in ScreenTime\Updater.cs (Updater.Repo) to exist,
 # be public, and have at least one commit. The version must be higher than the previous release's.
@@ -12,7 +15,8 @@ param(
     [Parameter(Mandatory = $true)][string]$Version,
     [string]$Notes,
     [string]$NotesFile,
-    [switch]$Draft
+    [switch]$Draft,
+    [switch]$Prerelease
 )
 $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
@@ -43,6 +47,7 @@ $ghArgs = @('release', 'create', $tag, $setup, '--repo', $repo, '--title', "Scre
 if ($NotesFile) { $ghArgs += @('--notes-file', $NotesFile) }
 else { $ghArgs += @('--notes', $(if ($Notes) { $Notes } else { "Screen Time $Version" })) }
 if ($Draft) { $ghArgs += '--draft' }
+if ($Prerelease) { $ghArgs += '--prerelease' }
 
 Write-Host "`nPublishing $tag to $repo..."
 gh @ghArgs

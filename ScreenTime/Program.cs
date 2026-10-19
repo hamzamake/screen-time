@@ -75,7 +75,7 @@ internal sealed class TrayApp : ApplicationContext
     private readonly Settings _settings;
     private readonly Updater _updater;
     private bool _manualUpdateCheck;
-    private string _updateNotified;
+    private string _updateNotified, _failNotified;
     private readonly HashSet<string> _limitWarned = new();
     private readonly List<ToolStripItem> _todayItems = new();
     private DateTime _pausedUntil = DateTime.MaxValue;
@@ -91,7 +91,7 @@ internal sealed class TrayApp : ApplicationContext
         _db.StartSession();
         _tracker = new Tracker(db);
         _settings = new Settings(db, _tracker);
-        _updater = new Updater(_settings);
+        _updater = new Updater(_settings, isAway: () => _tracker.Now().State is "idle" or "locked");
 
         // ---- tray menu ----
         _menu = new ContextMenuStrip();
@@ -204,47 +204,61 @@ internal sealed class TrayApp : ApplicationContext
         if (last != Updater.CurrentText)
         {
             _db.SetMeta("app_version", Updater.CurrentText);
-            if (last != null)
+            if (last != null && _settings.UpdateNotify)
                 _tray.ShowBalloonTip(8000, "Screen Time was updated", $"You're now on version {Updater.CurrentText}. Your history is untouched.", ToolTipIcon.Info);
         }
-        else if (_updater.Status == Updater.State.Failed)
+        else if (_updater.Status == Updater.State.Failed && _settings.UpdateNotify)
             _tray.ShowBalloonTip(10_000, "Screen Time update failed", _updater.Error, ToolTipIcon.Warning);
     }
 
+    /// <summary>Tray "Check for updates" / "Install update x.y.z".</summary>
     private void OnUpdateItem()
     {
         if (_updater.Status is Updater.State.Checking or Updater.State.Downloading or Updater.State.Installing) return;
         _manualUpdateCheck = true;
-        if (_updater.Status == Updater.State.Available) _ = _updater.InstallAsync();
-        else _ = _updater.CheckAsync(install: _settings.AutoUpdate);
+        if (_updater.Status is Updater.State.Available or Updater.State.Ready) _ = _updater.InstallAsync();
+        else _ = _updater.CheckAsync();
     }
 
+    /// <summary>
+    /// Keeps the tray item current and shows update notifications: always for a check started from the tray,
+    /// otherwise only with "Show notifications about updates" on, and once per version / error.
+    /// </summary>
     private void OnUpdaterChanged()
     {
         var latest = _updater.Latest;
+        bool manual = _manualUpdateCheck, notify = _settings.UpdateNotify;
         switch (_updater.Status)
         {
             case Updater.State.Checking: _updateItem.Text = "Checking for updates…"; break;
             case Updater.State.Downloading: _updateItem.Text = $"Downloading update… {_updater.DownloadPercent}%"; break;
             case Updater.State.Installing: _updateItem.Text = "Installing update…"; break;
             case Updater.State.Available:
-                _updateItem.Text = $"Install update {latest.VersionText}";
-                if (_updateNotified != latest.VersionText && !_settings.AutoUpdate)
+            case Updater.State.Ready:
+                bool ready = _updater.Status == Updater.State.Ready;
+                _updateItem.Text = ready ? $"Install update {latest.VersionText} now" : $"Install update {latest.VersionText}";
+                bool waiting = ready || !_settings.AutoUpdate || _updater.Skipped;   // otherwise it's about to download and install
+                if (waiting && (manual || notify && !_updater.Skipped && _updateNotified != latest.VersionText + ready))
                 {
-                    _updateNotified = latest.VersionText;
+                    _updateNotified = latest.VersionText + ready;
                     _tray.ShowBalloonTip(10_000, "Screen Time update available",
-                        $"Version {latest.VersionText} is ready. Click to open the dashboard and install it.", ToolTipIcon.Info);
+                        _updater.Skipped ? $"Version {latest.VersionText} is available (you chose to skip it). Click to open the dashboard."
+                        : ready ? $"Version {latest.VersionText} is downloaded and installs when you're away from the PC. Click to open the dashboard to install it now."
+                        : $"Version {latest.VersionText} is available. Click to open the dashboard and install it.", ToolTipIcon.Info);
                 }
                 break;
             default:
                 _updateItem.Text = "Check for updates";
-                if (_manualUpdateCheck && _updater.Status == Updater.State.UpToDate)
+                if (manual && _updater.Status == Updater.State.UpToDate)
                     _tray.ShowBalloonTip(5000, "Screen Time is up to date", $"You have the latest version ({Updater.CurrentText}).", ToolTipIcon.Info);
-                else if (_manualUpdateCheck && _updater.Status == Updater.State.Failed)
+                else if (_updater.Status == Updater.State.Failed && (manual || notify && _failNotified != _updater.Error))
+                {
+                    _failNotified = _updater.Error;
                     _tray.ShowBalloonTip(8000, "Couldn't update Screen Time", _updater.Error, ToolTipIcon.Warning);
+                }
                 break;
         }
-        if (_updater.Status is not (Updater.State.Checking or Updater.State.Downloading or Updater.State.Available)) _manualUpdateCheck = false;
+        if (_updater.Status is not (Updater.State.Checking or Updater.State.Downloading)) _manualUpdateCheck = false;
     }
 
     private static Icon LoadIcon()

@@ -1,23 +1,25 @@
 using System.Diagnostics;
 using System.Net.Http;
-using System.Reflection;
 using System.Security.Cryptography;
 using System.Text.Json;
 
 namespace ScreenTime;
 
 /// <summary>
-/// Updates from GitHub releases. Every few hours it asks GitHub for the latest release of <see cref="Repo"/>;
-/// if its tag (e.g. "v1.5.0") is a higher version than this build and it has a ScreenTime-Setup.exe asset,
-/// that setup is downloaded, checked, and run with --update: it installs silently into the same folder,
-/// keeps the user's shortcuts and autostart choice, and restarts Screen Time. Nothing else is ever sent.
+/// Updates from GitHub releases of <see cref="Repo"/>. A release is an update when its tag (e.g. "v1.5.0") is a
+/// higher version than this build and it has a ScreenTime-Setup.exe asset. That setup is downloaded, checked,
+/// and run with --update: it installs silently into the same folder, keeps the user's shortcuts and autostart
+/// choice, and restarts Screen Time. Nothing is ever sent anywhere.
+///
+/// Everything is configurable in <see cref="Settings"/>: scheduled checks on/off and how often, install by itself
+/// or ask first, install right away or only while the user is away, betas, notifications, and a skipped version.
 /// </summary>
 internal sealed class Updater
 {
     /// <summary>The GitHub repository ("owner/name") whose releases are the updates. It must be public.</summary>
     public const string Repo = "hamzamake/screen-time";
     public const string AssetName = "ScreenTime-Setup.exe";
-    private static readonly TimeSpan FirstCheckAfter = TimeSpan.FromMinutes(2), CheckEvery = TimeSpan.FromHours(6);
+    private static readonly TimeSpan FirstTickAfter = TimeSpan.FromMinutes(2), TickEvery = TimeSpan.FromMinutes(1);
 
     public static readonly Version Current = Normalize(typeof(Updater).Assembly.GetName().Version ?? new Version(0, 0, 0));
     public static string CurrentText => Text(Current);
@@ -25,31 +27,38 @@ internal sealed class Updater
     /// <summary>Written by the setup when an --update install fails (read and removed on the next start).</summary>
     private static readonly string ErrorFile = Path.Combine(Folder, "last-error.txt");
 
-    public sealed record Release(Version Version, string Name, string Notes, string PageUrl, string AssetUrl, long Size, string Sha256)
+    public sealed record Release(Version Version, string Name, string Notes, string PageUrl, string AssetUrl, long Size,
+                                 string Sha256, bool Prerelease)
     {
         public string VersionText => Text(Version);
     }
 
-    public enum State { Idle, Checking, UpToDate, Available, Downloading, Installing, Failed }
+    /// <summary>Ready: downloaded and checked, waiting to install (until the user is away, or told to).</summary>
+    public enum State { Idle, Checking, UpToDate, Available, Downloading, Ready, Installing, Failed }
 
     private readonly Settings _settings;
-    private readonly object _sync = new();
+    private readonly Func<bool> _isAway;
     private System.Threading.Timer _timer;
     private int _busy;
+    private string _downloaded;   // verified setup of Latest, when Status is Ready
 
     public State Status { get; private set; } = State.Idle;
     /// <summary>A newer release, once a check found one.</summary>
     public Release Latest { get; private set; }
     public string Error { get; private set; }
-    public DateTime LastCheck { get; private set; }
     public int DownloadPercent { get; private set; }
+    public DateTime LastCheck => _settings.UpdateLastCheck;
+    /// <summary>The user chose to skip <see cref="Latest"/>.</summary>
+    public bool Skipped => Latest != null && Latest.VersionText == _settings.UpdateSkip;
 
     /// <summary>Fires after any change of <see cref="Status"/>, on a thread-pool thread.</summary>
     public event Action Changed;
 
-    public Updater(Settings settings)
+    /// <param name="isAway">True while the user is idle or the PC is locked (for "install when I'm away").</param>
+    public Updater(Settings settings, Func<bool> isAway)
     {
         _settings = settings;
+        _isAway = isAway;
         try
         {
             if (File.Exists(ErrorFile))
@@ -62,47 +71,77 @@ internal sealed class Updater
         catch { }
     }
 
-    public void Start() =>
-        _timer = new System.Threading.Timer(_ => _ = CheckAsync(install: _settings.AutoUpdate), null, FirstCheckAfter, CheckEvery);
+    public void Start() => _timer = new System.Threading.Timer(_ => OnTimer(), null, FirstTickAfter, TickEvery);
 
     public void Stop() => _timer?.Dispose();
 
-    /// <summary>Asks GitHub for the latest release; installs it when <paramref name="install"/> and it's newer.</summary>
-    public async Task CheckAsync(bool install)
+    /// <summary>Once a minute: install a downloaded update when it's time, and check when a check is due.</summary>
+    private void OnTimer()
+    {
+        if (Volatile.Read(ref _busy) != 0) return;
+        if (Status == State.Ready && _settings.AutoUpdate && !Skipped && InstallTimeNow())
+        {
+            _ = InstallAsync();
+            return;
+        }
+        if (!_settings.UpdateCheck) return;
+        // After a failure, try again within the hour rather than waiting a whole interval.
+        int hours = Status == State.Failed ? 1 : _settings.UpdateHours;
+        var since = DateTime.Now - LastCheck;
+        if (since >= TimeSpan.FromHours(hours) || since < TimeSpan.Zero) _ = CheckAsync();
+    }
+
+    private bool InstallTimeNow() => _settings.UpdateWhen != "away" || _isAway();
+
+    /// <summary>
+    /// Looks for a new version now. What happens next follows the settings: with automatic updates on (and the
+    /// version not skipped) it's downloaded, then installed right away or once the user is away.
+    /// </summary>
+    public async Task CheckAsync()
     {
         if (Interlocked.CompareExchange(ref _busy, 1, 0) != 0) return;
         try
         {
             Set(State.Checking);
-            CleanUp();
-            Latest = await FetchLatest().ConfigureAwait(false);
-            LastCheck = DateTime.Now;
+            var rel = await FetchLatest(_settings.UpdatePrerelease).ConfigureAwait(false);
+            _settings.UpdateLastCheck = DateTime.Now;
             Error = null;
-            if (Latest == null) { Set(State.UpToDate); return; }
-            Set(State.Available);
-            if (install) await InstallLocked().ConfigureAwait(false);
+            if (rel == null || Latest == null || rel.Version != Latest.Version) _downloaded = null;
+            Latest = rel;
+            CleanUp(_downloaded);
+            if (rel == null) { Set(State.UpToDate); return; }
+            Set(_downloaded != null ? State.Ready : State.Available);
+            if (!_settings.AutoUpdate || Skipped) return;
+            if (_downloaded == null) await DownloadLocked().ConfigureAwait(false);
+            if (InstallTimeNow()) RunSetup();
+            else Set(State.Ready);   // the minute timer installs it once the user is away
         }
-        catch (Exception ex)
-        {
-            LastCheck = DateTime.Now;
-            Error = Describe(ex);
-            Set(State.Failed);
-        }
+        catch (Exception ex) { Fail(ex); }
         finally { Interlocked.Exchange(ref _busy, 0); }
     }
 
-    /// <summary>Downloads and runs the setup of the release a check found (checks first if needed).</summary>
-    public Task InstallAsync() => Latest == null ? CheckAsync(install: true) : InstallNowAsync();
-
-    private async Task InstallNowAsync()
+    /// <summary>"Update now": installs the newest version right away (looking for it first if needed), even if skipped.</summary>
+    public async Task InstallAsync()
     {
         if (Interlocked.CompareExchange(ref _busy, 1, 0) != 0) return;
-        try { await InstallLocked().ConfigureAwait(false); }
-        catch (Exception ex) { Error = Describe(ex); Set(State.Failed); }
+        try
+        {
+            if (Latest == null)
+            {
+                Set(State.Checking);
+                Latest = await FetchLatest(_settings.UpdatePrerelease).ConfigureAwait(false);
+                _settings.UpdateLastCheck = DateTime.Now;
+                if (Latest == null) { Set(State.UpToDate); return; }
+            }
+            if (Skipped) _settings.UpdateSkip = "";
+            if (_downloaded == null) await DownloadLocked().ConfigureAwait(false);
+            RunSetup();
+        }
+        catch (Exception ex) { Fail(ex); }
         finally { Interlocked.Exchange(ref _busy, 0); }
     }
 
-    private async Task InstallLocked()
+    private async Task DownloadLocked()
     {
         var rel = Latest;
         DownloadPercent = 0;
@@ -129,7 +168,7 @@ internal sealed class Updater
             }
         }
 
-        // Make sure this is really the Screen Time setup for that version before running it.
+        // Make sure this is really the Screen Time setup for that version before it can run.
         if (rel.Size > 0 && new FileInfo(part).Length != rel.Size) throw new InvalidDataException("The download was incomplete.");
         if (rel.Sha256 != null)
         {
@@ -141,34 +180,53 @@ internal sealed class Updater
         if (info.ProductName != "Screen Time" || !TryParse(info.ProductVersion, out var fileVersion) || fileVersion < rel.Version)
             throw new InvalidDataException($"The release's {AssetName} isn't the Screen Time {rel.VersionText} setup.");
         File.Move(part, file, true);
-
-        Set(State.Installing);
-        // The setup asks this app to save and exit, installs, and starts the new version.
-        Process.Start(new ProcessStartInfo(file, "--update") { UseShellExecute = false, WorkingDirectory = Folder });
+        _downloaded = file;
     }
 
-    private static async Task<Release> FetchLatest()
+    /// <summary>Starts the downloaded setup. It asks this app to save and exit, installs, and starts the new version.</summary>
+    private void RunSetup()
+    {
+        Set(State.Installing);
+        Process.Start(new ProcessStartInfo(_downloaded, "--update") { UseShellExecute = false, WorkingDirectory = Folder });
+    }
+
+    private void Fail(Exception ex)
+    {
+        Error = Describe(ex);
+        _downloaded = null;
+        Set(State.Failed);
+    }
+
+    /// <summary>The highest-versioned release newer than this one that has the setup attached, or null.</summary>
+    private static async Task<Release> FetchLatest(bool prerelease)
     {
         using var http = Client(TimeSpan.FromSeconds(30));
-        using var res = await http.GetAsync($"https://api.github.com/repos/{Repo}/releases/latest").ConfigureAwait(false);
-        if (res.StatusCode == System.Net.HttpStatusCode.NotFound) return null;   // no release published yet
+        using var res = await http.GetAsync($"https://api.github.com/repos/{Repo}/releases?per_page=30").ConfigureAwait(false);
+        if (res.StatusCode == System.Net.HttpStatusCode.NotFound) return null;   // repo not published (yet)
         res.EnsureSuccessStatusCode();
         using var doc = JsonDocument.Parse(await res.Content.ReadAsStreamAsync().ConfigureAwait(false));
-        var r = doc.RootElement;
-        if (!TryParse(Str(r, "tag_name"), out var version) || version <= Current) return null;
-        foreach (var a in r.GetProperty("assets").EnumerateArray())
+        Release best = null;
+        foreach (var r in doc.RootElement.EnumerateArray())
         {
-            if (!string.Equals(Str(a, "name"), AssetName, StringComparison.OrdinalIgnoreCase)) continue;
-            string digest = Str(a, "digest");
-            return new Release(version,
-                Str(r, "name") is { Length: > 0 } name ? name : "Screen Time " + Text(version),
-                Str(r, "body") ?? "",
-                Str(r, "html_url"),
-                Str(a, "browser_download_url"),
-                a.TryGetProperty("size", out var s) && s.TryGetInt64(out long size) ? size : 0,
-                digest != null && digest.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase) ? digest[7..] : null);
+            bool pre = r.TryGetProperty("prerelease", out var p) && p.ValueKind == JsonValueKind.True;
+            if (r.TryGetProperty("draft", out var d) && d.ValueKind == JsonValueKind.True || pre && !prerelease) continue;
+            if (!TryParse(Str(r, "tag_name"), out var version) || version <= Current || best != null && version <= best.Version) continue;
+            foreach (var a in r.GetProperty("assets").EnumerateArray())
+            {
+                if (!string.Equals(Str(a, "name"), AssetName, StringComparison.OrdinalIgnoreCase)) continue;
+                string digest = Str(a, "digest");
+                best = new Release(version,
+                    Str(r, "name") is { Length: > 0 } name ? name : "Screen Time " + Text(version),
+                    Str(r, "body") ?? "",
+                    Str(r, "html_url"),
+                    Str(a, "browser_download_url"),
+                    a.TryGetProperty("size", out var s) && s.TryGetInt64(out long size) ? size : 0,
+                    digest != null && digest.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase) ? digest[7..] : null,
+                    pre);
+                break;
+            }
         }
-        return null;   // a release without the setup attached isn't an update
+        return best;
     }
 
     private static HttpClient Client(TimeSpan timeout)
@@ -179,14 +237,15 @@ internal sealed class Updater
         return http;
     }
 
-    /// <summary>Removes setups downloaded earlier (one may still be running right after an update; it's skipped).</summary>
-    private static void CleanUp()
+    /// <summary>Removes setups downloaded earlier except <paramref name="keep"/> (one still running is skipped).</summary>
+    private static void CleanUp(string keep)
     {
         try
         {
             if (!Directory.Exists(Folder)) return;
             foreach (var f in Directory.EnumerateFiles(Folder, "ScreenTime-Setup-*"))
-                try { File.Delete(f); } catch { }
+                if (!string.Equals(f, keep, StringComparison.OrdinalIgnoreCase))
+                    try { File.Delete(f); } catch { }
         }
         catch { }
     }

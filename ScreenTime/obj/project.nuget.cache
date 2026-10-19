@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "p3EN3H9MSkc=",
+  "dgSpecHash": "1s/me/Iny7E=",
   "success": true,
-  "projectFilePath": "C:\\Users\\HamzaTom\\Desktop\\Dont Touch\\software files\\time tracker for pc\\ScreenTime\\ScreenTime.csproj",
+  "projectFilePath": "C:\\Users\\HamzaTom\\Documents\\GitHub\\screen-time\\ScreenTime\\ScreenTime.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\HamzaTom\\.nuget\\packages\\microsoft.net.illink.tasks\\9.0.21\\microsoft.net.illink.tasks.9.0.21.nupkg.sha512",
     "C:\\Users\\HamzaTom\\.nuget\\packages\\microsoft.netcore.app.ref\\9.0.21\\microsoft.netcore.app.ref.9.0.21.nupkg.sha512",

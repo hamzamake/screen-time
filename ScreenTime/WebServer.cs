@@ -540,7 +540,13 @@ internal sealed class WebServer
         w.WriteNumber("idleMinutes", _settings.IdleMinutes);
         w.WriteBoolean("countMedia", _settings.CountMedia);
         w.WriteBoolean("autoStart", _settings.AutoStart);
+        w.WriteBoolean("updateCheck", _settings.UpdateCheck);
+        w.WriteNumber("updateHours", _settings.UpdateHours);
         w.WriteBoolean("autoUpdate", _settings.AutoUpdate);
+        w.WriteString("updateWhen", _settings.UpdateWhen);
+        w.WriteBoolean("updatePrerelease", _settings.UpdatePrerelease);
+        w.WriteBoolean("updateNotify", _settings.UpdateNotify);
+        w.WriteString("updateSkip", _settings.UpdateSkip);
         w.WriteEndObject();
     }
 
@@ -553,7 +559,12 @@ internal sealed class WebServer
             if (r.TryGetProperty("trackOpen", out var v) && v.ValueKind is JsonValueKind.True or JsonValueKind.False) _settings.TrackOpenTime = v.GetBoolean();
             if (r.TryGetProperty("countMedia", out v) && v.ValueKind is JsonValueKind.True or JsonValueKind.False) _settings.CountMedia = v.GetBoolean();
             if (r.TryGetProperty("autoStart", out v) && v.ValueKind is JsonValueKind.True or JsonValueKind.False) _settings.AutoStart = v.GetBoolean();
+            if (r.TryGetProperty("updateCheck", out v) && v.ValueKind is JsonValueKind.True or JsonValueKind.False) _settings.UpdateCheck = v.GetBoolean();
+            if (r.TryGetProperty("updateHours", out v) && v.ValueKind == JsonValueKind.Number) _settings.UpdateHours = v.GetInt32();
             if (r.TryGetProperty("autoUpdate", out v) && v.ValueKind is JsonValueKind.True or JsonValueKind.False) _settings.AutoUpdate = v.GetBoolean();
+            if (r.TryGetProperty("updateWhen", out v) && v.ValueKind == JsonValueKind.String) _settings.UpdateWhen = v.GetString();
+            if (r.TryGetProperty("updatePrerelease", out v) && v.ValueKind is JsonValueKind.True or JsonValueKind.False) _settings.UpdatePrerelease = v.GetBoolean();
+            if (r.TryGetProperty("updateNotify", out v) && v.ValueKind is JsonValueKind.True or JsonValueKind.False) _settings.UpdateNotify = v.GetBoolean();
             if (r.TryGetProperty("idleMinutes", out v) && v.ValueKind == JsonValueKind.Number) _settings.IdleMinutes = v.GetInt32();
         }
         catch (Exception ex) when (ex is JsonException or InvalidOperationException or FormatException)
@@ -589,7 +600,10 @@ internal sealed class WebServer
         }
     }
 
-    /// <summary>{"action": "check"} looks for a new version now; {"action": "install"} installs it.</summary>
+    /// <summary>
+    /// {"action": ...}: "check" looks for a new version now (then follows the update settings), "install" installs
+    /// the newest one right away, "skip" skips the version found, "unskip" stops skipping.
+    /// </summary>
     private Response PostUpdate(Request req)
     {
         string action;
@@ -602,9 +616,14 @@ internal sealed class WebServer
         {
             return Text(400, "Bad request");
         }
-        if (action == "check") _ = _updater.CheckAsync(install: false);
-        else if (action == "install") _ = _updater.InstallAsync();
-        else return Text(400, "Bad action");
+        switch (action)
+        {
+            case "check": _ = _updater.CheckAsync(); break;
+            case "install": _ = _updater.InstallAsync(); break;
+            case "skip": if (_updater.Latest != null) _settings.UpdateSkip = _updater.Latest.VersionText; break;
+            case "unskip": _settings.UpdateSkip = ""; break;
+            default: return Text(400, "Bad action");
+        }
         return Json(WriteUpdate);   // both set "checking" / "downloading" before their first await
     }
 
@@ -617,12 +636,17 @@ internal sealed class WebServer
         if (_updater.Latest is { } rel)
         {
             w.WriteString("latest", rel.VersionText);
+            w.WriteBoolean("prerelease", rel.Prerelease);
+            w.WriteBoolean("skipped", _updater.Skipped);
             w.WriteString("name", rel.Name);
             w.WriteString("notes", rel.Notes.Length > 4000 ? rel.Notes[..4000] + "…" : rel.Notes);
             if (rel.PageUrl != null) w.WriteString("url", rel.PageUrl);
         }
         if (_updater.Status == Updater.State.Downloading) w.WriteNumber("percent", _updater.DownloadPercent);
         if (_updater.Error != null) w.WriteString("error", _updater.Error);
+        if (_settings.UpdateSkip.Length > 0) w.WriteString("skip", _settings.UpdateSkip);
+        w.WriteBoolean("auto", _settings.AutoUpdate);
+        w.WriteString("when", _settings.UpdateWhen);
         if (_updater.LastCheck != default) w.WriteNumber("lastCheck", new DateTimeOffset(_updater.LastCheck).ToUnixTimeMilliseconds());
         w.WriteEndObject();
     }
