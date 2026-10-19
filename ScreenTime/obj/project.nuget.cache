@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "dgSpecHash": "p3EN3H9MSkc=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\HamzaTom\\Desktop\\Dont Touch\\software files\\time tracker for pc\\ScreenTime\\ScreenTime.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\HamzaTom\\.nuget\\packages\\microsoft.net.illink.tasks\\9.0.21\\microsoft.net.illink.tasks.9.0.21.nupkg.sha512",
+    "C:\\Users\\HamzaTom\\.nuget\\packages\\microsoft.netcore.app.ref\\9.0.21\\microsoft.netcore.app.ref.9.0.21.nupkg.sha512",
+    "C:\\Users\\HamzaTom\\.nuget\\packages\\microsoft.netcore.app.runtime.win-x64\\9.0.21\\microsoft.netcore.app.runtime.win-x64.9.0.21.nupkg.sha512",
+    "C:\\Users\\HamzaTom\\.nuget\\packages\\microsoft.windowsdesktop.app.ref\\9.0.21\\microsoft.windowsdesktop.app.ref.9.0.21.nupkg.sha512",
+    "C:\\Users\\HamzaTom\\.nuget\\packages\\microsoft.windowsdesktop.app.runtime.win-x64\\9.0.21\\microsoft.windowsdesktop.app.runtime.win-x64.9.0.21.nupkg.sha512",
+    "C:\\Users\\HamzaTom\\.nuget\\packages\\microsoft.aspnetcore.app.ref\\9.0.21\\microsoft.aspnetcore.app.ref.9.0.21.nupkg.sha512",
+    "C:\\Users\\HamzaTom\\.nuget\\packages\\microsoft.aspnetcore.app.runtime.win-x64\\9.0.21\\microsoft.aspnetcore.app.runtime.win-x64.9.0.21.nupkg.sha512",
+    "C:\\Users\\HamzaTom\\.nuget\\packages\\microsoft.netcore.app.host.win-x64\\9.0.21\\microsoft.netcore.app.host.win-x64.9.0.21.nupkg.sha512"
+  ],
+  "logs": []
+}

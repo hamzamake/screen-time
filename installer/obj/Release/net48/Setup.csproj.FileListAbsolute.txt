@@ -1,0 +1,8 @@
+C:\Users\HamzaTom\Desktop\Dont Touch\software files\time tracker for pc\build\setup\ScreenTime-Setup.exe.config
+C:\Users\HamzaTom\Desktop\Dont Touch\software files\time tracker for pc\build\setup\ScreenTime-Setup.exe
+C:\Users\HamzaTom\Desktop\Dont Touch\software files\time tracker for pc\installer\obj\Release\net48\Setup.csproj.AssemblyReference.cache
+C:\Users\HamzaTom\Desktop\Dont Touch\software files\time tracker for pc\installer\obj\Release\net48\Setup.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\HamzaTom\Desktop\Dont Touch\software files\time tracker for pc\installer\obj\Release\net48\Setup.AssemblyInfoInputs.cache
+C:\Users\HamzaTom\Desktop\Dont Touch\software files\time tracker for pc\installer\obj\Release\net48\Setup.AssemblyInfo.cs
+C:\Users\HamzaTom\Desktop\Dont Touch\software files\time tracker for pc\installer\obj\Release\net48\Setup.csproj.CoreCompileInputs.cache
+C:\Users\HamzaTom\Desktop\Dont Touch\software files\time tracker for pc\installer\obj\Release\net48\ScreenTime-Setup.exe

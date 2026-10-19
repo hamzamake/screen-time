@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "Screen Time Connector",
+  "version": "1.4.0",
+  "description": "Tells the Screen Time desktop app which website you're on, so it can track time per site.",
+  "permissions": ["tabs", "alarms", "storage"],
+  "host_permissions": ["http://127.0.0.1:47321/*"],
+  "background": { "service_worker": "background.js" },
+  "action": { "default_title": "Screen Time", "default_popup": "popup.html", "default_icon": { "16": "icons/icon16.png", "32": "icons/icon32.png" } },
+  "icons": { "16": "icons/icon16.png", "32": "icons/icon32.png", "48": "icons/icon48.png", "128": "icons/icon128.png" }
+}

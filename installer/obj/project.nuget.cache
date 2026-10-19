@@ -1,0 +1,11 @@
+{
+  "version": 2,
+  "dgSpecHash": "Z6wLoEokyd0=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\HamzaTom\\Desktop\\Dont Touch\\software files\\time tracker for pc\\installer\\Setup.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\HamzaTom\\.nuget\\packages\\microsoft.netframework.referenceassemblies\\1.0.3\\microsoft.netframework.referenceassemblies.1.0.3.nupkg.sha512",
+    "C:\\Users\\HamzaTom\\.nuget\\packages\\microsoft.netframework.referenceassemblies.net48\\1.0.3\\microsoft.netframework.referenceassemblies.net48.1.0.3.nupkg.sha512"
+  ],
+  "logs": []
+}

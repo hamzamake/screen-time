@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Screen Time</title>
+<style>
+:root{color-scheme:light dark;--ink:#0b0b0b;--ink2:#52514e;--bg:#fcfcfb;--border:rgba(11,11,11,.1);--accent:#2a78d6;--good:#0ca30c;--bad:#d03b3b}
+@media (prefers-color-scheme:dark){:root{--ink:#fff;--ink2:#c3c2b7;--bg:#1a1a19;--border:rgba(255,255,255,.1);--accent:#3987e5}}
+body{margin:0;width:260px;padding:14px;background:var(--bg);color:var(--ink);font:13px/1.45 system-ui,"Segoe UI",sans-serif}
+h1{font-size:15px;margin:0 0 8px;display:flex;align-items:center;gap:8px}
+h1 img{width:20px;height:20px}
+.status{display:flex;align-items:center;gap:8px;color:var(--ink2);margin-bottom:10px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ink2)}
+.dot.ok{background:var(--good)}.dot.bad{background:var(--bad)}
+.big{font-size:26px;font-weight:650;margin:2px 0 12px}
+.label{color:var(--ink2)}
+ul{list-style:none;margin:0 0 12px;padding:0}li{display:flex;justify-content:space-between;gap:10px;padding:3px 0;border-top:1px solid var(--border)}li span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+[hidden]{display:none}
+.box{border:1px solid var(--border);border-radius:10px;padding:10px;margin:0 0 12px}
+.box input,.box select{width:100%;box-sizing:border-box;margin:3px 0 8px;padding:5px 8px;border:1px solid var(--border);border-radius:7px;background:transparent;color:inherit;font:inherit}
+.small{font-size:12px;color:var(--ink2)}
+button{width:100%;padding:8px;border:0;border-radius:8px;background:var(--accent);color:#fff;font:inherit;font-weight:600;cursor:pointer}
+</style>
+</head>
+<body>
+<h1><img src="icons/icon32.png" alt="">Screen Time</h1>
+<div class="status"><i class="dot" id="dot"></i><span id="status">Checking…</span></div>
+<div class="label">Today</div>
+<div class="big" id="today">–</div>
+<div id="sitesBox" hidden><div class="label">Top websites today</div><ul id="sites"></ul></div>
+<div class="box" id="browserBox" hidden>
+  <div id="browserForm">
+    <div class="label">This browser</div>
+    <input id="bName" maxlength="40" aria-label="Name of this browser">
+    <div class="label">Tracker group</div>
+    <select id="bGroup" aria-label="Tracker group"></select>
+    <div class="small" id="bTotals"></div>
+  </div>
+  <div class="small" id="browserNote"></div>
+</div>
+<button id="open">Open dashboard</button>
+<script src="popup.js"></script>
+</body>
+</html>

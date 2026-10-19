@@ -1,0 +1,1419 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Screen Time</title>
+<link rel="icon" href="/favicon.ico">
+<script>try{const t=localStorage.getItem('st.theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}</script>
+<style>
+:root{color-scheme:light;
+  --plane:#f9f9f7;--surface:#fcfcfb;--raised:#ffffff;--ink:#0b0b0b;--ink2:#52514e;--muted:#898781;
+  --grid:#e1e0d9;--axis:#c3c2b7;--border:rgba(11,11,11,.10);--track:#efeee9;--hover:rgba(11,11,11,.04);
+  --accent:#2a78d6;--accent-strong:#1c5cab;--accent-wash:rgba(42,120,214,.10);
+  --good:#0ca30c;--warn:#fab219;--critical:#d03b3b;--idle:#898781;
+  --h1:#cde2fb;--h2:#9ec5f4;--h3:#6da7ec;--h4:#3987e5;--h5:#256abf;--h6:#184f95;
+  --series-app:#2a78d6;--series-site:#eb6834;--open:rgba(42,120,214,.28);
+  --font:system-ui,-apple-system,"Segoe UI",sans-serif}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;
+  --plane:#0d0d0d;--surface:#1a1a19;--raised:#242422;--ink:#ffffff;--ink2:#c3c2b7;--muted:#898781;
+  --grid:#2c2c2a;--axis:#383835;--border:rgba(255,255,255,.10);--track:#2a2a28;--hover:rgba(255,255,255,.05);
+  --accent:#3987e5;--accent-strong:#86b6ef;--accent-wash:rgba(57,135,229,.16);--critical:#e66767;
+  --h1:#0d366b;--h2:#104281;--h3:#1c5cab;--h4:#2a78d6;--h5:#5598e7;--h6:#9ec5f4;
+  --series-app:#3987e5;--series-site:#d95926;--open:rgba(57,135,229,.32)}}
+:root[data-theme="dark"]{color-scheme:dark;
+  --plane:#0d0d0d;--surface:#1a1a19;--raised:#242422;--ink:#ffffff;--ink2:#c3c2b7;--muted:#898781;
+  --grid:#2c2c2a;--axis:#383835;--border:rgba(255,255,255,.10);--track:#2a2a28;--hover:rgba(255,255,255,.05);
+  --accent:#3987e5;--accent-strong:#86b6ef;--accent-wash:rgba(57,135,229,.16);--critical:#e66767;
+  --h1:#0d366b;--h2:#104281;--h3:#1c5cab;--h4:#2a78d6;--h5:#5598e7;--h6:#9ec5f4;
+  --series-app:#3987e5;--series-site:#d95926;--open:rgba(57,135,229,.32)}
+
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--plane);color:var(--ink);font:14px/1.45 var(--font);-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+[hidden]{display:none!important}
+.wrap{max-width:1180px;margin:0 auto;padding:20px 16px 48px}
+
+header{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+.brand{display:flex;align-items:center;gap:10px;font-size:20px;font-weight:650;letter-spacing:-.01em;margin-right:auto}
+.brand img{width:28px;height:28px}
+.live{display:flex;align-items:center;gap:8px;padding:6px 12px;border:1px solid var(--border);
+  border-radius:999px;background:var(--surface);color:var(--ink2);font-size:13px;max-width:100%;min-width:0}
+.live b{color:var(--ink);font-weight:600}
+.live span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--idle);flex:none}
+.dot.active{background:var(--good);box-shadow:0 0 0 3px color-mix(in srgb,var(--good) 20%,transparent)}
+.dot.paused{background:var(--warn)}
+
+.toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.seg{display:flex;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:3px;gap:2px;flex-wrap:wrap}
+.seg button{border:0;background:none;padding:6px 12px;border-radius:7px;cursor:pointer;color:var(--ink2);white-space:nowrap}
+.seg button:hover{background:var(--hover);color:var(--ink)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:#fff}
+.nav{display:flex;align-items:center;gap:6px;min-width:0}
+.icon-btn{width:32px;height:32px;border:1px solid var(--border);background:var(--surface);border-radius:8px;cursor:pointer;
+  display:grid;place-items:center;color:var(--ink2);flex:none;font-size:15px;line-height:1}
+.icon-btn:hover:not(:disabled){color:var(--ink);background:var(--raised)}
+.icon-btn:disabled{opacity:.35;cursor:default}
+.range-label{font-weight:600;font-size:15px;min-width:0}
+.custom{display:none;align-items:center;gap:6px;color:var(--ink2)}
+.custom.show{display:flex}
+.custom input{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:5px 8px}
+
+.tiles{display:grid;grid-template-columns:1.5fr repeat(3,1fr);gap:12px;margin-bottom:12px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 18px;min-width:0}
+.tile .label{color:var(--ink2);font-size:13px}
+.tile .value{font-size:26px;font-weight:650;letter-spacing:-.01em;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile .sub{color:var(--muted);font-size:12.5px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile.hero .value{font-size:48px;line-height:1.1}
+.delta{color:var(--ink2)}
+
+.card-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.card-head h2{font-size:15px;margin:0;font-weight:620}
+.card-head .meta{color:var(--muted);font-size:13px}
+.spacer{flex:1}
+.section{margin-bottom:12px}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--accent-wash);color:var(--ink);border-radius:999px;
+  padding:3px 4px 3px 10px;font-size:12.5px}
+.chip button{border:0;background:none;cursor:pointer;color:var(--ink2);width:20px;height:20px;border-radius:50%;line-height:1}
+.chip button:hover{background:var(--hover);color:var(--ink)}
+.link-btn{border:1px solid var(--border);background:none;border-radius:8px;padding:4px 10px;cursor:pointer;color:var(--ink2);font-size:12.5px}
+.link-btn:hover{color:var(--ink);background:var(--hover)}
+
+/* chart */
+.chart{position:relative;height:270px}
+.chart svg{display:block;width:100%;height:100%}
+.axis-label{fill:var(--muted);font-size:11px;font-variant-numeric:tabular-nums}
+.chart .bar{fill:var(--accent);pointer-events:none}
+.chart .hit:hover + .bar{fill:var(--accent-strong)}
+.chart .hit{fill:transparent}
+.tip{position:absolute;pointer-events:none;background:var(--raised);border:1px solid var(--border);border-radius:8px;
+  padding:6px 10px;font-size:12.5px;box-shadow:0 4px 16px rgba(0,0,0,.12);white-space:nowrap;opacity:0;transition:opacity .08s;z-index:2}
+.tip b{display:block;font-size:14px}
+.tip span{color:var(--ink2)}
+.empty{display:grid;place-items:center;height:100%;color:var(--muted);text-align:center;padding:16px}
+table.data{width:100%;border-collapse:collapse;font-size:13px}
+table.data th,table.data td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--grid)}
+table.data td:last-child,table.data th:last-child{text-align:right;font-variant-numeric:tabular-nums}
+.table-wrap{max-height:270px;overflow:auto}
+
+/* heatmap */
+.heat-wrap{position:relative;overflow-x:auto}
+.heat{display:grid;grid-template-columns:38px repeat(24,minmax(12px,1fr));gap:3px;min-width:420px}
+.heat .hl{font-size:11px;color:var(--muted);display:flex;align-items:center}
+.heat .hh{font-size:11px;color:var(--muted);text-align:left;white-space:nowrap;height:16px}
+.heat .c{height:22px;border-radius:4px;background:var(--track)}
+.heat .c:hover{outline:2px solid var(--ink);outline-offset:1px}
+.legend{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:12px;margin-top:10px;flex-wrap:wrap}
+.legend i{width:16px;height:12px;border-radius:3px;display:inline-block}
+
+/* limits */
+.limits{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px 24px}
+.limit{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center;padding:6px 0;cursor:pointer;border:0;background:none;text-align:left;width:100%}
+.limit .ln{font-weight:560;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.limit .lv{font-size:12.5px;color:var(--ink2);font-variant-numeric:tabular-nums;white-space:nowrap}
+.limit .track{grid-column:1/3}
+.limit.over .fill{background:var(--critical)}
+.limit .over-label{color:var(--critical);font-weight:600}
+.limit:hover .ln{text-decoration:underline}
+
+/* lists */
+.lists{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.search{flex:1;min-width:120px;max-width:220px;background:var(--plane);border:1px solid var(--border);border-radius:8px;padding:5px 10px}
+.rows{display:flex;flex-direction:column}
+.row{display:flex;align-items:stretch;border-radius:9px}
+.row:hover,.row:focus-within{background:var(--hover)}
+.row.sel{background:var(--accent-wash)}
+.row.is-hidden{opacity:.55}
+.row-main{flex:1;display:grid;grid-template-columns:28px 1fr auto;gap:4px 12px;align-items:center;padding:8px 4px 8px 8px;
+  cursor:pointer;border:0;background:none;text-align:left;min-width:0;border-radius:9px}
+.row-more{width:30px;border:0;background:none;color:var(--muted);cursor:pointer;border-radius:7px;font-size:16px;letter-spacing:1px;flex:none;opacity:.6}
+.row:hover .row-more,.row-more:focus-visible,.row-more[aria-expanded="true"]{opacity:1}
+.row-more:hover{color:var(--ink);background:var(--hover)}
+.ico{width:28px;height:28px;border-radius:7px;display:grid;place-items:center;background:var(--track);color:var(--ink2);
+  font-weight:650;font-size:13px;grid-row:span 2;overflow:hidden}
+.ico img{width:22px;height:22px;object-fit:contain}
+.name{font-weight:560;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.hint{color:var(--muted);font-weight:400;margin-left:6px}
+.badge{display:inline-block;font-size:11px;font-weight:600;color:var(--ink2);background:var(--track);border-radius:5px;padding:0 5px;margin-left:6px;vertical-align:1px}
+.time{font-variant-numeric:tabular-nums;font-weight:560;text-align:right;white-space:nowrap}
+.barline{grid-column:2/4;display:flex;align-items:center;gap:10px;min-width:0}
+.track{flex:1;height:6px;background:var(--track);border-radius:3px;overflow:hidden}
+.track,.fill{display:block}
+.track{position:relative}
+.fill{height:100%;background:var(--accent);border-radius:3px;position:relative}
+.fill.open{position:absolute;left:0;top:0;background:var(--open)}
+.openlbl{color:var(--muted);font-size:12px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.chart .bar-open{fill:var(--open);pointer-events:none}
+.key{display:inline-flex;align-items:center;gap:6px;color:var(--ink2);font-size:12.5px}
+.key i{width:12px;height:12px;border-radius:3px;display:inline-block}
+
+/* all activity (apps + websites) */
+.hbars{display:flex;flex-direction:column;gap:2px;position:relative}
+.hrow{display:grid;grid-template-columns:minmax(120px,240px) 1fr 72px;gap:12px;align-items:center;padding:5px 6px;border-radius:8px;cursor:pointer;border:0;background:none;text-align:left;width:100%}
+.hrow:hover,.hrow:focus-visible{background:var(--hover);outline:none}
+.hrow.sel{background:var(--accent-wash)}
+.hname{display:flex;align-items:center;gap:8px;min-width:0}
+.hname .ico{width:20px;height:20px;border-radius:5px;font-size:11px;grid-row:auto}
+.hname .ico img{width:16px;height:16px}
+.hname span.t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hname em{font-style:normal;color:var(--muted)}
+.hbar{height:14px;border-radius:0 4px 4px 0;min-width:2px}
+.hbar.app{background:var(--series-app)}
+.hbar.site{background:var(--series-site)}
+.htime{text-align:right;font-variant-numeric:tabular-nums;font-weight:560;white-space:nowrap}
+.dlg-body label.setting{display:flex;gap:12px;align-items:flex-start;font-weight:400;margin:0 0 14px;cursor:pointer}
+.dlg-body label.setting input{margin-top:4px;width:16px;height:16px;flex:none}
+.dlg-body label.setting b{display:block;color:var(--ink);font-weight:600}
+.dlg-body label.setting small{display:block;color:var(--muted);font-size:12.5px;margin-top:2px}
+@media (max-width:520px){.hrow{grid-template-columns:110px 1fr 62px;gap:8px}}
+
+/* browser trackers */
+.trk-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.trk{display:flex;flex-direction:column;gap:6px}
+.trk.all{border-color:color-mix(in srgb,var(--accent) 45%,var(--border));box-shadow:inset 3px 0 0 var(--accent)}
+.trk h3{margin:0;font-size:14px;font-weight:650;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.trk .big{font-size:28px;font-weight:650;letter-spacing:-.01em;line-height:1.15}
+.trk .life{color:var(--muted);font-size:12.5px}
+.trk ul{list-style:none;margin:4px 0 0;padding:0;font-size:12.5px;color:var(--ink2)}
+.trk li{display:flex;justify-content:space-between;gap:8px;padding:2px 0}
+.trk li span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.trk li b{font-weight:560;color:var(--ink);font-variant-numeric:tabular-nums}
+.trk .who{font-size:12px;color:var(--muted)}
+.trk .who i{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--good);margin-right:4px;vertical-align:1px}
+.trk.hintcard{justify-content:center;color:var(--ink2);font-size:13px}
+dialog.wide{width:min(760px,calc(100vw - 32px))}
+.dlg-body h4{margin:16px 0 6px;color:var(--ink);font-size:13.5px}
+table.trk-table{width:100%;border-collapse:collapse;font-size:13px}
+table.trk-table th{text-align:left;font-weight:600;color:var(--muted);font-size:12px;padding:4px 6px;border-bottom:1px solid var(--grid)}
+table.trk-table td{padding:6px;border-bottom:1px solid var(--grid);vertical-align:middle}
+table.trk-table td.c{text-align:center;width:90px}
+table.trk-table input[type=text]{width:100%;background:var(--plane);border:1px solid var(--border);border-radius:7px;padding:5px 8px}
+table.trk-table select{background:var(--plane);border:1px solid var(--border);border-radius:7px;padding:5px 6px;max-width:170px}
+table.trk-table small{display:block;color:var(--muted);font-size:11.5px;margin-top:2px}
+table.trk-table tr.confirm td{background:color-mix(in srgb,var(--warn) 14%,transparent)}
+.dlg-body .addrow{display:flex;gap:8px;margin-top:10px}
+.dlg-body .addrow input{flex:1;background:var(--plane);border:1px solid var(--border);border-radius:8px;padding:7px 10px}
+.pct{color:var(--muted);font-size:12px;width:40px;text-align:right;font-variant-numeric:tabular-nums}
+.more{margin-top:6px;align-self:flex-start}
+.hint-box{color:var(--ink2);font-size:13px;line-height:1.6;padding:6px 8px}
+.hint-box code{background:var(--track);border-radius:4px;padding:1px 5px;font-size:12px}
+
+/* popup menu */
+.menu{position:fixed;z-index:20;min-width:200px;max-width:300px;background:var(--raised);border:1px solid var(--border);border-radius:10px;
+  box-shadow:0 8px 28px rgba(0,0,0,.18);padding:4px}
+.menu button{display:block;width:100%;text-align:left;border:0;background:none;padding:7px 10px;border-radius:7px;cursor:pointer;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.menu button:hover,.menu button:focus-visible{background:var(--hover);outline:none}
+.menu hr{border:0;border-top:1px solid var(--border);margin:4px 2px}
+.menu .note{color:var(--muted);font-size:12px;padding:4px 10px}
+
+/* dialog */
+dialog{border:1px solid var(--border);border-radius:14px;background:var(--raised);color:var(--ink);padding:0;width:min(460px,calc(100vw - 32px));
+  box-shadow:0 20px 60px rgba(0,0,0,.3)}
+dialog::backdrop{background:rgba(0,0,0,.35)}
+dialog form{padding:18px 20px}
+dialog h3{margin:0 0 12px;font-size:16px}
+.dlg-body{color:var(--ink2);font-size:13.5px;line-height:1.55}
+.dlg-body p{margin:0 0 10px}
+.dlg-body label{display:block;color:var(--ink);font-weight:560;margin:10px 0 4px}
+.dlg-body input[type=text],.dlg-body input[type=number],.dlg-body select{width:100%;background:var(--plane);border:1px solid var(--border);border-radius:8px;padding:7px 10px}
+.dlg-body .inline{display:flex;gap:8px;align-items:center}
+.dlg-body .inline input{width:90px}
+.dlg-actions{display:flex;flex-direction:row-reverse;gap:8px;margin-top:18px;flex-wrap:wrap}
+.btn{border:1px solid var(--border);background:var(--surface);border-radius:8px;padding:7px 14px;cursor:pointer;font-weight:560}
+.btn:hover{background:var(--hover)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{background:var(--accent-strong);border-color:var(--accent-strong)}
+.btn.danger{color:var(--critical)}
+.btn.left{margin-right:auto}
+.btn:disabled{opacity:.5;cursor:default}
+.files{display:flex;flex-direction:column;gap:6px;margin:8px 0;max-height:240px;overflow:auto}
+.files label{display:flex!important;gap:10px;align-items:flex-start;font-weight:400!important;margin:0!important;padding:8px;border:1px solid var(--border);border-radius:8px;cursor:pointer}
+.files small{display:block;color:var(--muted)}
+.result{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:6px 0 10px}
+.result b{color:var(--ink)}
+.warnline{color:var(--ink);background:color-mix(in srgb,var(--warn) 18%,transparent);border-radius:8px;padding:8px 10px}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--track);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;vertical-align:-2px;margin-right:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* update banner */
+.banner{display:flex;align-items:center;gap:8px 12px;flex-wrap:wrap;padding:10px 14px;margin-bottom:14px;border-radius:12px;font-size:13.5px;
+  border:1px solid color-mix(in srgb,var(--accent) 40%,var(--border));background:var(--accent-wash)}
+.banner.bad{border-color:color-mix(in srgb,var(--critical) 45%,var(--border));background:color-mix(in srgb,var(--critical) 10%,transparent)}
+.banner .msg{flex:1;min-width:200px}
+.banner .acts{display:flex;gap:8px;flex-wrap:wrap}
+.banner .btn{padding:5px 12px}
+.notes{white-space:pre-wrap;max-height:300px;overflow:auto;background:var(--plane);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:13px;color:var(--ink)}
+.icon-btn.on{color:var(--ink);background:color-mix(in srgb,var(--warn) 30%,var(--surface));border-color:color-mix(in srgb,var(--warn) 60%,var(--border))}
+
+footer{margin-top:20px;display:flex;gap:8px 16px;flex-wrap:wrap;align-items:center;color:var(--muted);font-size:12.5px}
+footer a,footer .linkish{color:var(--ink2);background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;font-size:12.5px}
+footer label{display:flex;align-items:center;gap:6px;cursor:pointer}
+kbd{font:11px var(--font);border:1px solid var(--border);border-bottom-width:2px;border-radius:4px;padding:0 4px;color:var(--ink2)}
+
+@media (max-width:900px){.tiles{grid-template-columns:1fr 1fr}.tile.hero{grid-column:1/-1}.lists{grid-template-columns:1fr}}
+@media (max-width:520px){.tile.hero .value{font-size:40px}.live{width:100%}.chart{height:220px}.heat .hh:not(.h6){visibility:hidden}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand"><img src="/favicon.ico" alt="">Screen Time</div>
+    <div class="live" id="live" role="status"><i class="dot" id="liveDot"></i><span id="liveText">Connecting…</span></div>
+    <button class="icon-btn" id="pauseBtn" aria-label="Pause tracking" title="Pause tracking (P)" aria-haspopup="menu">⏸</button>
+    <button class="icon-btn" id="settingsBtn" aria-label="Settings" title="Settings">⚙</button>
+    <button class="icon-btn" id="themeBtn" aria-label="Theme: automatic" title="Theme: automatic">◐</button>
+  </header>
+  <div class="banner" id="updBanner" role="status" hidden></div>
+
+  <div class="toolbar">
+    <div class="seg" id="presets" role="group" aria-label="Date range">
+      <button data-p="today" title="Today (T)">Today</button>
+      <button data-p="yesterday" title="Yesterday (Y)">Yesterday</button>
+      <button data-p="7d" title="Last 7 days (W)">7 days</button>
+      <button data-p="30d" title="Last 30 days (M)">30 days</button>
+      <button data-p="year">This year</button>
+      <button data-p="all" title="All time (A)">All time</button>
+      <button data-p="custom">Custom</button>
+    </div>
+    <div class="nav">
+      <button class="icon-btn" id="prev" aria-label="Previous period" title="Previous period (←)">&#8249;</button>
+      <button class="icon-btn" id="next" aria-label="Next period" title="Next period (→)">&#8250;</button>
+      <div class="range-label" id="rangeLabel"></div>
+    </div>
+    <div class="custom" id="custom">
+      <input type="date" id="cFrom" aria-label="From"> – <input type="date" id="cTo" aria-label="To">
+    </div>
+  </div>
+
+  <section class="tiles">
+    <div class="card tile hero"><div class="label">Total screen time</div><div class="value" id="tTotal">–</div><div class="sub" id="tTotalSub">&nbsp;</div></div>
+    <div class="card tile"><div class="label" id="tAvgLabel">Daily average</div><div class="value" id="tAvg">–</div><div class="sub" id="tAvgSub">&nbsp;</div></div>
+    <div class="card tile"><div class="label">Most used app</div><div class="value" id="tApp">–</div><div class="sub" id="tAppSub">&nbsp;</div></div>
+    <div class="card tile"><div class="label">Top website</div><div class="value" id="tSite">–</div><div class="sub" id="tSiteSub">&nbsp;</div></div>
+  </section>
+
+  <section class="card section" id="limitsCard">
+    <div class="card-head"><h2>Daily limits</h2><span class="meta">today</span><span class="spacer"></span>
+      <button class="link-btn" id="addLimit">+ Add limit</button></div>
+    <div id="limits"></div>
+  </section>
+
+  <section class="section" id="trackersSection" hidden>
+    <div class="card-head"><h2>Browser trackers</h2><span class="meta" id="trkMeta"></span><span class="spacer"></span>
+      <button class="link-btn" id="manageTrackers">Manage trackers</button></div>
+    <div class="trk-cards" id="trkCards"></div>
+  </section>
+
+  <section class="card section">
+    <div class="card-head">
+      <h2 id="chartTitle">Screen time</h2>
+      <span class="meta" id="chartMeta"></span>
+      <span id="filterChip"></span>
+      <span class="spacer"></span>
+      <span id="chartKey"></span>
+      <button class="link-btn" id="tableToggle" aria-pressed="false">Table</button>
+    </div>
+    <div class="chart" id="chart"></div>
+    <div class="table-wrap" id="chartTable" hidden></div>
+  </section>
+
+  <section class="card section" id="allCard" hidden>
+    <div class="card-head"><h2>All activity</h2><span class="meta">apps and websites together, most time first</span><span class="spacer"></span>
+      <span class="key"><i style="background:var(--series-app)"></i>App</span><span class="key"><i style="background:var(--series-site)"></i>Website</span></div>
+    <div class="hbars" id="allBars"></div>
+    <div class="tip" id="allTip"></div>
+  </section>
+
+  <section class="card section" id="heatCard" hidden>
+    <div class="card-head"><h2 id="heatTitle">Weekly pattern</h2><span class="meta">average per weekday and hour</span></div>
+    <div class="heat-wrap" id="heatWrap"><div class="heat" id="heat"></div><div class="tip" id="heatTip"></div></div>
+    <div class="legend" id="heatLegend"></div>
+  </section>
+
+  <section class="lists">
+    <div class="card">
+      <div class="card-head"><h2>Apps</h2><span class="meta" id="appsMeta"></span><span class="spacer"></span>
+        <button class="link-btn" id="appsSort" hidden></button>
+        <input class="search" id="appSearch" type="search" placeholder="Search apps" aria-label="Search apps"></div>
+      <div class="rows" id="apps"></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2>Websites</h2><span class="meta" id="sitesMeta"></span><span class="spacer"></span>
+        <button class="link-btn" id="sitesSort" hidden></button>
+        <input class="search" id="siteSearch" type="search" placeholder="Search websites" aria-label="Search websites"></div>
+      <div class="rows" id="sites"></div>
+    </div>
+  </section>
+
+  <footer>
+    <a href="/api/export.csv" download>Export all data (CSV)</a>
+    <button class="linkish" id="importBtn">Import from ActivityWatch</button>
+    <label><input type="checkbox" id="showHidden"> <span id="showHiddenLabel">Show hidden</span></label>
+    <span><kbd>←</kbd> <kbd>→</kbd> change period · <kbd>T</kbd> <kbd>W</kbd> <kbd>M</kbd> <kbd>A</kbd> ranges · <kbd>/</kbd> search · <kbd>P</kbd> pause · <kbd>Esc</kbd> clear</span>
+    <span id="footInfo"></span>
+    <span id="footVersion"></span><button class="linkish" id="checkUpdates">Check for updates</button>
+  </footer>
+</div>
+
+<dialog id="dlg"><form id="dlgForm" method="dialog"><h3 id="dlgTitle"></h3><div class="dlg-body" id="dlgBody"></div><div class="dlg-actions" id="dlgActions"></div></form></dialog>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ls = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
+
+const api = {
+  async get(path) {
+    const r = await fetch(path);
+    if (!r.ok) throw new Error(await r.text() || r.statusText);
+    return r.json();
+  },
+  async post(path, body) {
+    const r = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-ScreenTime': '1' }, body: JSON.stringify(body) });
+    if (!r.ok) throw new Error(await r.text() || r.statusText);
+    return r.status === 204 ? null : r.json();
+  },
+};
+
+// ---- dates: yyyymmdd ints <-> UTC day numbers (DST-proof arithmetic) ----
+const toDN = n => Date.UTC(Math.floor(n / 10000), Math.floor(n / 100) % 100 - 1, n % 100) / 864e5;
+const fromDN = dn => { const d = new Date(dn * 864e5); return d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate(); };
+const dnDate = dn => new Date(dn * 864e5);
+const todayInt = () => { const d = new Date(); return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate(); };
+const isoOf = n => `${Math.floor(n / 10000)}-${String(Math.floor(n / 100) % 100).padStart(2, '0')}-${String(n % 100).padStart(2, '0')}`;
+const intOfIso = s => +s.replaceAll('-', '');
+const fmtDate = (n, opts) => dnDate(toDN(n)).toLocaleDateString(undefined, { timeZone: 'UTC', ...opts });
+
+// ---- durations ----
+function fmtDur(ms) {
+  const s = Math.round(ms / 1000);
+  if (s < 60) return s + 's';
+  const m = Math.floor(s / 60), h = Math.floor(m / 60);
+  if (h === 0) return m + 'm';
+  return (h >= 1000 ? h.toLocaleString() : h) + 'h' + (m % 60 ? ' ' + (m % 60) + 'm' : '');
+}
+const H = 36e5, M = 6e4;
+const STEPS = [M, 2*M, 5*M, 10*M, 15*M, 30*M, H, 2*H, 3*H, 4*H, 6*H, 12*H, 24*H, 48*H, 100*H, 200*H, 500*H, 1000*H, 2000*H, 5000*H];
+const hourLabel = h => (h % 12 || 12) + (h < 12 ? ' AM' : ' PM');
+const hourShort = h => (h % 12 || 12) + (h < 12 ? 'a' : 'p');
+const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const WEEKDAYS_LONG = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+// ---- state ----
+const state = {
+  preset: 'today', from: 0, to: 0, filter: null, table: false, firstDay: 0, data: null, limits: [], extSeen: -1,
+  showAll: { apps: false, sites: false, all: false }, showHidden: ls.get('st.hidden') === '1',
+  sortOpen: { apps: false, sites: false }, trackers: null, deletingGroup: 0, now: null, version: null,
+};
+{ const p = ls.get('st.preset'); if (p && p !== 'custom' && p !== 'range') state.preset = p; }
+
+function presetRange(p) {
+  const t = todayInt(), tdn = toDN(t);
+  switch (p) {
+    case 'yesterday': return [fromDN(tdn - 1), fromDN(tdn - 1)];
+    case '7d': return [fromDN(tdn - 6), t];
+    case '30d': return [fromDN(tdn - 29), t];
+    case 'year': return [Math.floor(t / 10000) * 10000 + 101, t];
+    case 'all': return [Math.min(state.firstDay || t, t), t];
+    default: return [t, t];
+  }
+}
+
+function setPreset(p) {
+  state.preset = p;
+  ls.set('st.preset', p);
+  if (p !== 'custom') [state.from, state.to] = presetRange(p);
+  $('custom').classList.toggle('show', p === 'custom');
+  load();
+}
+
+function shift(dir) {
+  const t = todayInt();
+  if (dir > 0 && state.to >= t) return;
+  const isYear = state.from % 10000 === 101 && Math.floor(state.from / 10000) === Math.floor(state.to / 10000)
+    && (state.to % 10000 === 1231 || state.to === t);
+  if (isYear) {
+    const y = Math.floor(state.from / 10000) + dir;
+    state.from = y * 10000 + 101; state.to = Math.min(y * 10000 + 1231, t);
+  } else {
+    const span = toDN(state.to) - toDN(state.from) + 1;
+    state.from = fromDN(toDN(state.from) + span * dir);
+    state.to = fromDN(toDN(state.to) + span * dir);
+    if (state.to > t) { state.to = t; state.from = fromDN(toDN(t) - span + 1); }
+  }
+  state.preset = matchPreset();
+  $('custom').classList.remove('show');
+  load();
+}
+
+function matchPreset() {
+  for (const p of ['today', 'yesterday', '7d', '30d', 'year', 'all']) {
+    const [f, t] = presetRange(p);
+    if (f === state.from && t === state.to) return p;
+  }
+  return 'range';
+}
+
+function rangeLabel() {
+  const { from, to } = state, t = todayInt();
+  const sameYear = Math.floor(from / 10000) === Math.floor(to / 10000) && Math.floor(to / 10000) === Math.floor(t / 10000);
+  if (from === to) {
+    const s = fmtDate(from, { weekday: 'long', month: 'long', day: 'numeric', year: sameYear ? undefined : 'numeric' });
+    return from === t ? 'Today · ' + s : from === fromDN(toDN(t) - 1) ? 'Yesterday · ' + s : s;
+  }
+  const o = { month: 'short', day: 'numeric', year: sameYear ? undefined : 'numeric' };
+  return fmtDate(from, o) + ' – ' + fmtDate(to, o);
+}
+
+function prevLabel() {
+  const days = toDN(state.to) - toDN(state.from) + 1, t = todayInt();
+  if (days === 1) return state.from === t ? 'yesterday' : 'the day before';
+  if (state.preset === 'year') return 'same days last year';
+  return `previous ${days} days`;
+}
+
+// ---- data ----
+let loadSeq = 0;
+async function load(quiet) {
+  if (state.preset !== 'custom' && state.preset !== 'range') [state.from, state.to] = presetRange(state.preset);
+  const seq = ++loadSeq;
+  const q = new URLSearchParams({ from: state.from, to: state.to });
+  if (state.filter) q.set(state.filter.kind, state.filter.id);
+  if (state.showHidden) q.set('hidden', '1');
+  try {
+    const [data, limits, trackers] = await Promise.all([
+      api.get('/api/summary?' + q), api.get('/api/limits'), api.get(`/api/trackers?from=${state.from}&to=${state.to}`)]);
+    if (seq !== loadSeq) return;
+    state.data = data;
+    state.limits = limits;
+    state.trackers = trackers;
+    render();
+  } catch (e) {
+    if (!quiet) $('chart').innerHTML = '<div class="empty">Can\'t reach the Screen Time app. Is it running?</div>';
+  }
+}
+
+function pausedText(until) {
+  if (!until) return 'Paused · press ▶ to resume';
+  const d = new Date(until), sameDay = d.toDateString() === new Date().toDateString();
+  return 'Paused until ' + d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+    + (sameDay ? '' : ' ' + d.toLocaleDateString(undefined, { weekday: 'short' })) + ' · press ▶ to resume';
+}
+
+async function loadNow() {
+  try {
+    const n = await api.get('/api/now');
+    const dot = $('liveDot'), text = $('liveText');
+    dot.className = 'dot ' + (n.state === 'active' || n.state === 'media' ? 'active' : n.state === 'paused' ? 'paused' : '');
+    if (n.state === 'active' || n.state === 'media') {
+      text.innerHTML = n.app ? `Now: <b>${esc(n.app)}</b>${n.site ? ' · ' + esc(n.site) : ''}${n.state === 'media' ? ' (playing)' : ''}` : 'Tracking';
+    } else {
+      text.textContent = { idle: 'Idle: not counting', paused: pausedText(n.pausedUntil), locked: 'PC locked' }[n.state] || n.state;
+    }
+    // The app was updated while this page was open: load the new dashboard.
+    if (state.version && n.version && n.version !== state.version) { location.reload(); return; }
+    state.version = n.version;
+    state.now = n;
+    const pb = $('pauseBtn');
+    pb.textContent = n.paused ? '▶' : '⏸';
+    pb.classList.toggle('on', !!n.paused);
+    pb.title = n.paused ? 'Resume tracking (P)' : 'Pause tracking (P)';
+    pb.setAttribute('aria-label', n.paused ? 'Resume tracking' : 'Pause tracking');
+    $('footVersion').textContent = n.version ? 'Version ' + n.version : '';
+    renderUpdate(n.update);
+    state.extSeen = n.extensionSecondsAgo;
+    const firstChanged = state.firstDay !== n.firstDay;
+    state.firstDay = n.firstDay;
+    $('footInfo').textContent = `Tracking since ${fmtDate(n.firstDay, { month: 'long', day: 'numeric', year: 'numeric' })} · Idle timeout ${n.idleMinutes} min · Data and daily backups: ${n.dataDir}`;
+    if (firstChanged && state.preset === 'all' && state.data) load(true);
+  } catch {
+    $('liveDot').className = 'dot';
+    $('liveText').textContent = 'App not running';
+  }
+}
+
+// ---- render ----
+function render() {
+  const d = state.data;
+  document.querySelectorAll('#presets button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.p === state.preset)));
+  $('rangeLabel').textContent = rangeLabel();
+  $('next').disabled = state.to >= todayInt();
+  $('cFrom').value = isoOf(state.from); $('cTo').value = isoOf(state.to);
+  $('showHidden').checked = state.showHidden;
+  $('showHiddenLabel').textContent = d.hiddenCount ? `Show hidden (${d.hiddenCount})` : 'Show hidden';
+
+  const days = toDN(d.to) - toDN(d.from) + 1;
+  $('tTotal').textContent = fmtDur(d.total);
+  if (d.prevTotal > 0 && d.total > 0 && state.preset !== 'all') {
+    const diff = d.total - d.prevTotal, pct = Math.round(diff / d.prevTotal * 100);
+    $('tTotalSub').innerHTML = `<span class="delta">${diff >= 0 ? '▲' : '▼'} ${fmtDur(Math.abs(diff))} (${pct >= 0 ? '+' : ''}${pct}%)</span> vs ${esc(prevLabel())}`;
+  } else {
+    $('tTotalSub').textContent = d.total ? `${d.apps.length} app${d.apps.length === 1 ? '' : 's'} · ${d.sites.length} website${d.sites.length === 1 ? '' : 's'}` : 'No activity recorded';
+  }
+  if (days > 1) {
+    $('tAvgLabel').textContent = 'Daily average';
+    $('tAvg').textContent = d.activeDays ? fmtDur(d.total / d.activeDays) : '–';
+    $('tAvgSub').textContent = `over ${d.activeDays} day${d.activeDays === 1 ? '' : 's'} with activity`;
+  } else {
+    const peak = (d.series || []).reduce((a, p) => p[1] > a[1] ? p : a, [0, 0]);
+    $('tAvgLabel').textContent = 'Busiest hour';
+    $('tAvg').textContent = peak[1] ? hourLabel(peak[0]) : '–';
+    $('tAvgSub').textContent = peak[1] ? fmtDur(peak[1]) + (state.filter ? ' of ' + state.filter.name : ' of use') : ' ';
+  }
+  const ta = d.apps[0], ts = d.sites[0];
+  $('tApp').textContent = ta ? ta.name : '–';
+  $('tAppSub').textContent = ta ? fmtDur(ta.ms) : ' ';
+  $('tSite').textContent = ts ? ts.domain : '–';
+  $('tSiteSub').textContent = ts ? fmtDur(ts.ms) : (state.extSeen < 0 ? 'Browser extension not connected' : ' ');
+
+  renderLimits();
+  renderTrackers();
+  renderChart();
+  renderHeat();
+  renderAll();
+  renderList('apps', d.apps, $('appSearch').value);
+  renderList('sites', d.sites, $('siteSearch').value);
+}
+
+// ---- browser trackers (groups of browser installations / profiles) ----
+function seenText(b) {
+  if (b.legacy) return 'history from before trackers';
+  if (b.active) return 'active now';
+  const s = b.lastSeenSecondsAgo;
+  return s < 120 ? 'seen just now' : s < 7200 ? `seen ${Math.round(s / 60)} min ago` : s < 172800 ? `seen ${Math.round(s / 3600)} h ago` : `seen ${Math.round(s / 86400)} days ago`;
+}
+
+function renderTrackers() {
+  const t = state.trackers, sec = $('trackersSection');
+  sec.hidden = !t || t.browsers.length === 0;
+  if (sec.hidden) return;
+  const inGroup = gid => t.browsers.filter(b => b.groupId === gid);
+  const sites = list => list.length ? `<ul>${list.map(x => `<li><span>${esc(x.domain)}</span><b>${fmtDur(x.ms)}</b></li>`).join('')}</ul>` : '';
+  const who = list => list.length
+    ? `<div class="who">${list.map(b => `${b.active ? '<i title="In use right now"></i>' : ''}${esc(b.name)}${b.include ? '' : ' (excluded from All Time)'}`).join(' · ')}</div>`
+    : '<div class="who">No browsers yet</div>';
+  const card = (title, o, extraClass, badge, members) => `<div class="card trk ${extraClass || ''}">
+      <h3>${esc(title)}${badge ? `<span class="badge">${esc(badge)}</span>` : ''}</h3>
+      <div class="big">${fmtDur(o.ms)}</div>
+      <div class="life">All-time total: ${fmtDur(o.lifetimeMs)}</div>
+      ${members ? who(members) : ''}${sites(o.topSites)}</div>`;
+
+  // what "All Time" is made of, in words
+  const parts = t.groups.filter(g => g.include).map(g => g.name);
+  if (t.unassigned.include && inGroup(0).length) parts.push('Unassigned');
+  const excludedBrowsers = t.browsers.filter(b => !b.include).length;
+  const made = (parts.length ? parts.join(' + ') : 'nothing included') + (excludedBrowsers ? ` (${excludedBrowsers} browser${excludedBrowsers === 1 ? '' : 's'} excluded)` : '');
+
+  let html = card('All Time', t.allTime, 'all', null, null).replace('<div class="life">', `<div class="who">${esc(made)}</div><div class="life">`);
+  for (const g of t.groups) html += card(g.name, g, '', g.include ? null : 'Not in All Time', inGroup(g.id));
+  if (inGroup(0).length) html += card('Unassigned', t.unassigned, '', t.unassigned.include ? null : 'Not in All Time', inGroup(0));
+  if (!t.groups.length)
+    html += `<div class="card trk hintcard">Use several browsers or profiles? Group them into trackers like <b>Work</b> and <b>Personal</b>, each with its own total.
+      <button class="link-btn" style="align-self:flex-start;margin-top:6px" data-manage>Set up trackers</button></div>`;
+  $('trkCards').innerHTML = html;
+  $('trkMeta').textContent = rangeLabel();
+  $('trkCards').querySelectorAll('[data-manage]').forEach(b => b.onclick = openTrackers);
+}
+
+async function trackerAction(body) {
+  await api.post('/api/trackers', body);
+  await refreshTrackerDialog();
+}
+
+async function refreshTrackerDialog() {
+  let t;
+  try { t = await api.get(`/api/trackers?from=${state.from}&to=${state.to}`); }
+  catch (e) { $('dlgBody').innerHTML = `<p class="warnline">${esc(e.message)}</p>`; return; }
+  state.trackers = t;
+  const groupOptions = sel => `<option value="0"${sel === 0 ? ' selected' : ''}>Unassigned</option>` +
+    t.groups.map(g => `<option value="${g.id}"${sel === g.id ? ' selected' : ''}>${esc(g.name)}</option>`).join('');
+  const groupRows = t.groups.map(g => {
+    const n = t.browsers.filter(b => b.groupId === g.id).length;
+    const row = `<tr><td><input type="text" maxlength="40" value="${esc(g.name)}" data-rename="${g.id}" aria-label="Group name"><small>${n} browser${n === 1 ? '' : 's'} · ${fmtDur(g.lifetimeMs)} all-time</small></td>
+      <td class="c"><input type="checkbox" data-ginc="${g.id}"${g.include ? ' checked' : ''} aria-label="Include ${esc(g.name)} in All Time"></td>
+      <td class="c"><button type="button" class="link-btn" data-del="${g.id}">Delete</button></td></tr>`;
+    if (state.deletingGroup !== g.id) return row;
+    const others = t.groups.filter(o => o.id !== g.id);
+    return row + `<tr class="confirm"><td colspan="3">Delete “${esc(g.name)}”? Its tracked time is kept with its browsers. Move its browsers to
+      <select id="delMove"><option value="0">Unassigned</option>${others.map(o => `<option value="${o.id}">${esc(o.name)}</option>`).join('')}</select>
+      <button type="button" class="btn danger" id="delYes">Delete group</button> <button type="button" class="btn" id="delNo">Cancel</button></td></tr>`;
+  }).join('');
+  const browserRows = t.browsers.map(b => {
+    const g = t.groups.find(x => x.id === b.groupId);
+    const groupOff = b.groupId ? g && !g.include : !t.unassigned.include;
+    return `<tr><td><input type="text" maxlength="40" value="${esc(b.name)}" data-bname="${b.id}" aria-label="Browser name">
+        <small>${b.exe ? esc(b.exe.replace(/\.exe$/i, '')) + ' · ' : ''}${seenText(b)} · ${fmtDur(b.lifetimeMs)} all-time</small></td>
+      <td><select data-assign="${b.id}" aria-label="Group for ${esc(b.name)}">${groupOptions(b.groupId)}</select></td>
+      <td class="c"><input type="checkbox" data-binc="${b.id}"${b.include ? ' checked' : ''} aria-label="Include ${esc(b.name)} in All Time">
+        ${groupOff && b.include ? '<small>its group is excluded</small>' : ''}</td></tr>`;
+  }).join('');
+
+  $('dlgBody').innerHTML = `
+    <p>Every browser installation or profile with the Screen Time extension appears below. Put them into groups like “Work” and “Personal”:
+      each group adds up the time of its browsers, and you choose what counts toward “All Time”. Excluded groups and browsers still track their own time.</p>
+    <h4>Groups</h4>
+    <table class="trk-table"><tr><th>Group</th><th class="c">In All Time</th><th></th></tr>${groupRows}
+      <tr><td>Unassigned<small>browsers without a group (new browsers start here)</small></td>
+        <td class="c"><input type="checkbox" id="uinc"${t.unassigned.include ? ' checked' : ''} aria-label="Include unassigned browsers in All Time"></td><td></td></tr></table>
+    <div class="addrow"><input id="newGroup" maxlength="40" placeholder="New group, e.g. Work" aria-label="New group name"><button type="button" class="btn" id="addGroup">Add group</button></div>
+    <h4>Browsers</h4>
+    ${t.browsers.length ? `<table class="trk-table"><tr><th>Browser</th><th>Group</th><th class="c">In All Time</th></tr>${browserRows}</table>`
+      : '<p>No browser has reported yet. Install the extension (tray icon → Set up browser extension…) and open a web page.</p>'}
+    <p style="font-size:12.5px;margin-top:10px">Not sure which is which? Click the Screen Time icon in that browser's toolbar: it shows the browser's name and lets you pick its group right there.</p>
+    <p class="warnline dlg-error" id="trkErr" hidden></p>`;
+
+  const run = async body => {
+    try { await trackerAction(body); }
+    catch (e) { const el = $('trkErr'); if (el) { el.hidden = false; el.textContent = e.message; } }
+  };
+  const body = $('dlgBody');
+  // Enter in a name box saves it (instead of submitting the dialog).
+  body.querySelectorAll('[data-rename],[data-bname]').forEach(i => i.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); i.blur(); } }));
+  body.querySelectorAll('[data-rename]').forEach(i => i.onchange = () => run({ action: 'renameGroup', id: +i.dataset.rename, name: i.value }));
+  body.querySelectorAll('[data-ginc]').forEach(i => i.onchange = () => run({ action: 'setGroupInclude', id: +i.dataset.ginc, include: i.checked }));
+  body.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { state.deletingGroup = +b.dataset.del; refreshTrackerDialog(); });
+  body.querySelectorAll('[data-bname]').forEach(i => i.onchange = () => run({ action: 'renameBrowser', browserId: +i.dataset.bname, name: i.value }));
+  body.querySelectorAll('[data-assign]').forEach(s => s.onchange = () => run({ action: 'assign', browserId: +s.dataset.assign, groupId: +s.value }));
+  body.querySelectorAll('[data-binc]').forEach(i => i.onchange = () => run({ action: 'setBrowserInclude', browserId: +i.dataset.binc, include: i.checked }));
+  $('uinc').onchange = e => run({ action: 'setUnassignedInclude', include: e.target.checked });
+  const add = () => { const n = $('newGroup').value.trim(); if (n) run({ action: 'createGroup', name: n }); };
+  $('addGroup').onclick = add;
+  $('newGroup').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); add(); } };
+  if ($('delYes')) {
+    $('delYes').onclick = () => { const id = state.deletingGroup; state.deletingGroup = 0; run({ action: 'deleteGroup', id, moveTo: +$('delMove').value }); };
+    $('delNo').onclick = () => { state.deletingGroup = 0; refreshTrackerDialog(); };
+  }
+}
+
+async function openTrackers() {
+  state.deletingGroup = 0;
+  const shown = openDialog({ title: 'Browser trackers', body: '<p>Loading…</p>', actions: [{ label: 'Done', primary: true }], wide: true });
+  await refreshTrackerDialog();
+  await shown;
+  load();
+}
+
+function renderLimits() {
+  const el = $('limits');
+  if (!state.limits.length) {
+    el.className = '';
+    el.innerHTML = '<div class="hint-box">Get a Windows notification when you go over a daily limit for an app, a website, or your total screen time. Use <b>+ Add limit</b>, or the <b>⋯</b> menu next to any app or website.</div>';
+    return;
+  }
+  el.className = 'limits';
+  el.innerHTML = state.limits.map((l, i) => {
+    const max = l.minutes * M, over = l.usedMs >= max, pct = Math.min(100, l.usedMs / max * 100);
+    const label = over ? `<span class="over-label">⚠ Over by ${fmtDur(l.usedMs - max)}</span>` : `${fmtDur(l.usedMs)} / ${fmtDur(max)}`;
+    return `<button class="limit${over ? ' over' : ''}" data-i="${i}" title="Edit limit"><span class="ln">${esc(l.name)}</span><span class="lv">${label}</span>
+      <span class="track"><span class="fill" style="width:${pct.toFixed(1)}%"></span></span></button>`;
+  }).join('');
+  el.querySelectorAll('.limit').forEach(b => b.onclick = () => {
+    const l = state.limits[+b.dataset.i];
+    editLimit(l.kind, l.id, l.name);
+  });
+}
+
+function buildSeries() {
+  const d = state.data;
+  const open = d.openSeries ? new Map(d.openSeries) : null;
+  const val = (m, k) => (m && m.get(k)) || 0;
+  const hasOpen = !!open && d.openSeries.length > 0;
+  if (d.unit === 'hour') {
+    const v = new Array(24).fill(0);
+    for (const [h, ms] of d.series) v[h] = ms;
+    return { unit: 'hour', hasOpen, pts: v.map((ms, h) => ({ short: hourShort(h), tip: `${hourLabel(h)} – ${hourLabel((h + 1) % 24)}`, v: ms, o: val(open, h) })) };
+  }
+  const map = new Map(d.series), f = toDN(d.from), t = toDN(d.to), n = t - f + 1;
+  if (n <= 62) {
+    const pts = [];
+    for (let dn = f; dn <= t; dn++) {
+      const day = fromDN(dn);
+      pts.push({ short: fmtDate(day, n <= 8 ? { weekday: 'short' } : { month: 'short', day: 'numeric' }),
+        tip: fmtDate(day, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }), v: val(map, day), o: val(open, day) });
+    }
+    return { unit: 'day', hasOpen, pts };
+  }
+  if (n <= 400) {
+    const weekStart = dn => dn - ((dnDate(dn).getUTCDay() + 6) % 7);
+    const pts = [];
+    for (let w = weekStart(f); w <= t; w += 7) {
+      let v = 0, o = 0;
+      for (let dn = Math.max(w, f); dn <= Math.min(w + 6, t); dn++) { v += val(map, fromDN(dn)); o += val(open, fromDN(dn)); }
+      pts.push({ short: fmtDate(fromDN(w), { month: 'short', day: 'numeric' }),
+        tip: 'Week of ' + fmtDate(fromDN(w), { month: 'short', day: 'numeric', year: 'numeric' }), v, o });
+    }
+    return { unit: 'week', hasOpen, pts };
+  }
+  const months = new Map();
+  for (let dn = f; dn <= t; dn++) {
+    const day = fromDN(dn), k = Math.floor(day / 100), cur = months.get(k) || [0, 0];
+    months.set(k, [cur[0] + val(map, day), cur[1] + val(open, day)]);
+  }
+  return { unit: 'month', hasOpen, pts: [...months].map(([k, [v, o]]) => ({
+    short: fmtDate(k * 100 + 1, { month: 'short', year: k % 100 === 1 ? '2-digit' : undefined }),
+    tip: fmtDate(k * 100 + 1, { month: 'long', year: 'numeric' }), v, o })) };
+}
+
+function renderChart() {
+  const s = buildSeries(), el = $('chart');
+  const sum = s.pts.reduce((a, p) => a + p.v, 0), openSum = s.pts.reduce((a, p) => a + (p.o || 0), 0);
+  const unitName = { hour: 'By hour', day: 'By day', week: 'By week', month: 'By month' }[s.unit];
+  $('chartTitle').textContent = (state.filter ? state.filter.name : 'Screen time') + ' · ' + unitName.toLowerCase();
+  $('chartMeta').textContent = !state.filter ? '' : s.hasOpen ? `${fmtDur(sum)} used · ${fmtDur(openSum)} open in this period` : fmtDur(sum) + ' in this period';
+  $('chartKey').innerHTML = s.hasOpen && !state.table
+    ? '<span class="key"><i style="background:var(--accent)"></i>Usage</span> <span class="key" style="margin-left:8px"><i style="background:var(--open)"></i>Open</span>' : '';
+  $('filterChip').innerHTML = state.filter
+    ? `<span class="chip">${state.filter.kind === 'site' ? 'Website' : 'App'}: ${esc(state.filter.name)}<button id="clearFilter" aria-label="Show everything" title="Show everything (Esc)">✕</button></span>` : '';
+  if (state.filter) $('clearFilter').onclick = clearFilter;
+
+  const tbl = $('chartTable');
+  tbl.hidden = !state.table; el.hidden = state.table;
+  if (state.table) {
+    tbl.innerHTML = '<table class="data"><thead><tr><th>' + unitName.replace('By ', '').replace(/^./, c => c.toUpperCase()) + '</th>'
+      + (s.hasOpen ? '<th style="text-align:right">Open</th>' : '') + '<th>Usage</th></tr></thead><tbody>'
+      + s.pts.map(p => `<tr><td>${esc(p.tip)}</td>${s.hasOpen ? `<td style="text-align:right;font-variant-numeric:tabular-nums">${p.o ? fmtDur(p.o) : '–'}</td>` : ''}<td>${p.v ? fmtDur(p.v) : '–'}</td></tr>`).join('') + '</tbody></table>';
+    return;
+  }
+  if (!sum && !openSum) { el.innerHTML = '<div class="empty">No screen time recorded in this period yet.</div>'; return; }
+
+  const W = el.clientWidth, Ht = el.clientHeight, ml = 46, mr = 6, mt = 10, mb = 24;
+  const pw = W - ml - mr, ph = Ht - mt - mb;
+  const max = Math.max(...s.pts.map(p => Math.max(p.v, p.o || 0)));
+  const step = STEPS.find(st => max / st <= 4) || STEPS[STEPS.length - 1];
+  const yMax = Math.ceil(max / step) * step || step;
+  const y = v => mt + ph - (v / yMax) * ph;
+  const band = pw / s.pts.length, bw = Math.max(2, Math.min(24, band * 0.68));
+
+  let g = '';
+  for (let v = 0; v <= yMax + 1; v += step) {
+    const yy = Math.round(y(v)) + .5;
+    g += `<line x1="${ml}" x2="${W - mr}" y1="${yy}" y2="${yy}" stroke="var(${v === 0 ? '--axis' : '--grid'})" stroke-width="1"/>`
+      + `<text class="axis-label" x="${ml - 8}" y="${yy + 4}" text-anchor="end">${v === 0 ? '0' : fmtDur(v)}</text>`;
+  }
+  const every = Math.max(1, Math.ceil(52 / band));
+  const offset = s.unit === 'hour' ? 0 : (s.pts.length - 1) % every;   // always label the most recent bar
+  s.pts.forEach((p, i) => {
+    if (i >= offset && (i - offset) % every === 0)
+      g += `<text class="axis-label" x="${ml + band * i + band / 2}" y="${Ht - 6}" text-anchor="middle">${esc(p.short)}</text>`;
+  });
+  s.pts.forEach((p, i) => {
+    const x0 = ml + band * i + (band - bw) / 2, x1 = x0 + bw, base = y(0);
+    if (p.o > 0) {   // open time: a lighter, slightly wider bar behind the usage bar
+      const ox0 = x0 - Math.min(3, bw * .15), ox1 = x1 + Math.min(3, bw * .15), top = Math.min(y(p.o), base - 1.5), r = Math.min(4, (ox1 - ox0) / 2, base - top);
+      g += `<path class="bar-open" d="M${ox0},${base}V${top + r}Q${ox0},${top} ${ox0 + r},${top}H${ox1 - r}Q${ox1},${top} ${ox1},${top + r}V${base}Z"/>`;
+    }
+    g += `<rect class="hit" data-i="${i}" x="${ml + band * i}" y="${mt}" width="${band}" height="${ph}"/>`;
+    if (p.v > 0) {
+      const top = Math.min(y(p.v), base - 1.5), r = Math.min(4, bw / 2, base - top);
+      g += `<path class="bar" d="M${x0},${base}V${top + r}Q${x0},${top} ${x0 + r},${top}H${x1 - r}Q${x1},${top} ${x1},${top + r}V${base}Z"/>`;
+    } else g += '<path class="bar" d=""/>';
+  });
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${Ht}" role="img" aria-label="${esc($('chartTitle').textContent)}">${g}</svg><div class="tip" id="tip"></div>`;
+
+  const tip = $('tip');
+  el.querySelectorAll('.hit').forEach(h => {
+    h.addEventListener('mouseenter', () => {
+      const p = s.pts[+h.dataset.i];
+      tip.innerHTML = s.hasOpen
+        ? `<b>${p.v ? fmtDur(p.v) + ' used' : 'Not used'}</b><span>${p.o ? fmtDur(p.o) + ' open · ' : ''}${esc(p.tip)}</span>`
+        : `<b>${p.v ? fmtDur(p.v) : 'No use'}</b><span>${esc(p.tip)}</span>`;
+      const bx = +h.getAttribute('x') + band / 2, by = y(Math.max(p.v, p.o || 0));
+      tip.style.opacity = 1;
+      const tw = tip.offsetWidth, th = tip.offsetHeight;
+      tip.style.left = Math.max(0, Math.min(W - tw, bx - tw / 2)) + 'px';
+      tip.style.top = Math.max(0, by - th - 8) + 'px';
+    });
+    h.addEventListener('mouseleave', () => tip.style.opacity = 0);
+  });
+}
+
+function renderHeat() {
+  const p = state.data.pattern, card = $('heatCard');
+  const max = p ? Math.max(...p.flat()) : 0;
+  card.hidden = !p || !max;
+  if (card.hidden) return;
+  $('heatTitle').textContent = 'Weekly pattern' + (state.filter ? ' · ' + state.filter.name : '');
+  const bin = v => v <= 0 ? 0 : Math.min(6, Math.ceil(v / max * 6));
+  let html = '<div></div>';
+  for (let h = 0; h < 24; h++) html += `<div class="hh${h % 6 === 0 ? ' h6' : ''}">${h % 3 === 0 ? hourShort(h) : ''}</div>`;
+  p.forEach((row, d) => {
+    html += `<div class="hl">${WEEKDAYS[d]}</div>`;
+    row.forEach((v, h) => {
+      const b = bin(v);
+      html += `<div class="c" data-d="${d}" data-h="${h}"${b ? ` style="background:var(--h${b})"` : ''}></div>`;
+    });
+  });
+  $('heat').innerHTML = html;
+  $('heatLegend').innerHTML = 'Less ' + [0, 1, 2, 3, 4, 5, 6].map(b => `<i style="background:var(${b ? '--h' + b : '--track'})"></i>`).join('')
+    + ` More <span style="margin-left:8px">Busiest: ${fmtDur(max)} on average</span>`;
+
+  const tip = $('heatTip'), wrap = $('heatWrap');
+  $('heat').querySelectorAll('.c').forEach(c => {
+    c.addEventListener('mouseenter', () => {
+      const d = +c.dataset.d, h = +c.dataset.h, v = p[d][h];
+      tip.innerHTML = `<b>${v ? fmtDur(v) : 'No use'}</b><span>${WEEKDAYS_LONG[d]}s, ${hourLabel(h)} – ${hourLabel((h + 1) % 24)} (average)</span>`;
+      tip.style.opacity = 1;
+      const r = c.getBoundingClientRect(), wr = wrap.getBoundingClientRect();
+      const tw = tip.offsetWidth;
+      tip.style.left = Math.max(0, Math.min(wr.width - tw, r.left - wr.left + wrap.scrollLeft + r.width / 2 - tw / 2)) + 'px';
+      tip.style.top = Math.max(0, r.top - wr.top - tip.offsetHeight - 6) + 'px';
+    });
+    c.addEventListener('mouseleave', () => tip.style.opacity = 0);
+  });
+}
+
+/**
+ * Apps and websites in one ranking. Website time happens inside the browser, so each browser's own
+ * entry only keeps the time no website was detected ("other pages"); the rows then add up to the total.
+ */
+function combinedItems() {
+  const d = state.data;
+  const siteTotal = d.sites.reduce((a, x) => a + x.ms, 0);
+  const browserTotal = d.apps.filter(a => a.browser).reduce((a, x) => a + x.ms, 0);
+  const inSites = Math.min(siteTotal, browserTotal);
+  const out = [];
+  for (const a of d.apps) {
+    if (a.ms <= 0) continue;
+    const ms = a.browser && browserTotal > 0 ? a.ms - inSites * (a.ms / browserTotal) : a.ms;
+    if (ms >= 1000) out.push({ kind: 'app', id: a.id, name: a.name, extra: a.browser && inSites > 0 ? 'other pages' : '', ms, icon: `/icon/app/${a.id}` });
+  }
+  for (const x of d.sites) if (x.ms >= 1000) out.push({ kind: 'site', id: x.id, name: x.domain, extra: '', ms: x.ms, icon: x.icon || '' });
+  return out.sort((a, b) => b.ms - a.ms);
+}
+
+function renderAll() {
+  const card = $('allCard'), items = combinedItems();
+  card.hidden = items.length === 0 || state.data.sites.length === 0;   // only interesting once there are websites
+  if (card.hidden) return;
+  const total = items.reduce((a, x) => a + x.ms, 0), top = items[0].ms;
+  const shown = state.showAll.all ? items : items.slice(0, 12);
+  const sel = state.filter ? state.filter.kind + ':' + state.filter.id : '';
+  $('allBars').innerHTML = shown.map((x, i) => {
+    const letter = esc((x.name[0] || '?').toUpperCase());
+    const img = x.icon ? `<img src="${esc(x.icon)}" alt="" loading="lazy" referrerpolicy="no-referrer" data-letter="${letter}">` : letter;
+    return `<button class="hrow${sel === x.kind + ':' + x.id ? ' sel' : ''}" data-i="${i}">
+      <span class="hname"><span class="ico">${img}</span><span class="t">${esc(x.name)}${x.extra ? ` <em>· ${esc(x.extra)}</em>` : ''}</span></span>
+      <span><span class="hbar ${x.kind}" style="display:block;width:${Math.max(.4, x.ms / top * 100).toFixed(2)}%"></span></span>
+      <span class="htime">${fmtDur(x.ms)}</span></button>`;
+  }).join('') + (items.length > shown.length ? `<button class="link-btn more" id="allMore">Show all ${items.length}</button>` : '');
+
+  const tip = $('allTip'), bars = $('allBars');
+  bars.querySelectorAll('img').forEach(i => i.addEventListener('error', () => { i.parentNode.textContent = i.dataset.letter; }, { once: true }));
+  bars.querySelectorAll('.hrow').forEach(r => {
+    const x = shown[+r.dataset.i];
+    r.onclick = () => toggleFilter(x.kind, x.id, x.name);
+    r.onmouseenter = () => {
+      tip.innerHTML = `<b>${fmtDur(x.ms)}</b><span>${Math.round(x.ms / total * 100)}% of all your time · ${x.kind === 'site' ? 'website' : x.extra ? 'browser, no website detected' : 'app'}</span>`;
+      tip.style.opacity = 1;
+      const br = bars.getBoundingClientRect(), rr = r.getBoundingClientRect();
+      tip.style.left = Math.max(0, Math.min(br.width - tip.offsetWidth, rr.right - br.left - tip.offsetWidth - 80)) + 'px';
+      tip.style.top = (rr.top - $('allCard').getBoundingClientRect().top - tip.offsetHeight - 4) + 'px';
+    };
+    r.onmouseleave = () => tip.style.opacity = 0;
+  });
+  const more = $('allMore');
+  if (more) more.onclick = () => { state.showAll.all = true; renderAll(); };
+}
+
+function limitFor(kind, id) { return state.limits.find(l => l.kind === kind && l.id === id); }
+
+function renderList(kind, items, query) {
+  const el = $(kind), total = items.reduce((a, x) => a + x.ms, 0);
+  const k = kind === 'apps' ? 'app' : 'site';
+  const label = x => kind === 'apps' ? x.name : x.domain;
+  $(kind + 'Meta').textContent = items.length ? `${items.length} · ${fmtDur(total)}` : '';
+  const q = (query || '').trim().toLowerCase();
+  const hasOpen = state.data.trackOpen && items.some(x => x.openMs);
+  const sortBtn = $(kind + 'Sort');
+  sortBtn.hidden = !hasOpen;
+  sortBtn.textContent = state.sortOpen[kind] ? 'Sorted by open time' : 'Sorted by usage';
+  sortBtn.title = 'Switch between most used and longest open';
+  sortBtn.onclick = () => { state.sortOpen[kind] = !state.sortOpen[kind]; renderList(kind, items, query); };
+  let list = q ? items.filter(x => label(x).toLowerCase().includes(q) || (x.exe || '').toLowerCase().includes(q) || (x.hint || '').toLowerCase().includes(q)) : items;
+  if (hasOpen && state.sortOpen[kind]) list = [...list].sort((a, b) => (b.openMs || 0) - (a.openMs || 0) || b.ms - a.ms);
+
+  if (!items.length) {
+    el.innerHTML = kind === 'sites' && state.extSeen < 0
+      ? `<div class="hint-box"><b>Track websites too:</b> add the browser extension. Right-click the Screen Time icon in the taskbar tray and choose
+         <b>Set up browser extension…</b>; it walks you through it in about a minute.</div>`
+      : '<div class="hint-box">Nothing recorded in this period.</div>';
+    return;
+  }
+  const limit = state.showAll[kind] || q ? list.length : 12;
+  const top = Math.max(1, ...items.map(x => Math.max(x.ms, hasOpen ? x.openMs || 0 : 0)));
+  const sel = state.filter && state.filter.kind === k ? state.filter.id : -1;
+  el.innerHTML = list.slice(0, limit).map(x => {
+    const name = label(x);
+    const letter = esc((name.replace(/^www\./, '')[0] || '?').toUpperCase());
+    const src = kind === 'apps' ? `/icon/app/${x.id}` : (x.icon || '');
+    const img = src ? `<img src="${esc(src)}" alt="" loading="lazy" referrerpolicy="no-referrer" data-letter="${letter}">` : letter;
+    const lim = limitFor(k, x.id);
+    const title = [x.path || name, hasOpen ? `Used ${fmtDur(x.ms)} · open ${fmtDur(x.openMs || 0)}` : '', x.original ? `Originally: ${x.original}` : '', x.merged ? 'Includes: ' + x.merged.map(m => m.name).join(', ') : ''].filter(Boolean).join('\n');
+    return `<div class="row${x.id === sel ? ' sel' : ''}${x.hidden ? ' is-hidden' : ''}" data-id="${x.id}">
+      <button class="row-main" title="${esc(title)}">
+        <span class="ico">${img}</span>
+        <span class="name">${esc(name)}${x.hint ? `<span class="hint">${esc(x.hint)}</span>` : ''}${x.merged ? `<span class="badge">+${x.merged.length}</span>` : ''}${x.hidden ? '<span class="badge">hidden</span>' : ''}${lim ? `<span class="badge" title="Daily limit">⏱ ${fmtDur(lim.minutes * M)}</span>` : ''}</span>
+        <span class="time">${fmtDur(x.ms)}</span>
+        <span class="barline"><span class="track">${hasOpen && x.openMs ? `<span class="fill open" style="width:${(x.openMs / top * 100).toFixed(1)}%"></span>` : ''}<span class="fill" style="width:${(x.ms / top * 100).toFixed(1)}%"></span></span>
+        ${hasOpen ? `<span class="openlbl">${x.openMs ? 'open ' + fmtDur(x.openMs) : 'not open'}</span>` : ''}
+        <span class="pct">${total ? Math.round(x.ms / total * 100) : 0}%</span></span>
+      </button>
+      <button class="row-more" aria-label="More options for ${esc(name)}" aria-haspopup="menu" aria-expanded="false">⋯</button>
+    </div>`;
+  }).join('') + (list.length > limit ? `<button class="link-btn more" data-more>Show all ${list.length}</button>` : '');
+
+  el.querySelectorAll('img').forEach(i => i.addEventListener('error', () => { i.parentNode.textContent = i.dataset.letter; }, { once: true }));
+  el.querySelectorAll('.row').forEach(r => {
+    const item = list.find(x => x.id === +r.dataset.id);
+    r.querySelector('.row-main').onclick = () => toggleFilter(k, item.id, label(item));
+    r.querySelector('.row-more').onclick = e => openItemMenu(e.currentTarget, k, item);
+  });
+  const more = el.querySelector('[data-more]');
+  if (more) more.onclick = () => { state.showAll[kind] = true; renderList(kind, items, $(kind === 'apps' ? 'appSearch' : 'siteSearch').value); };
+}
+
+function toggleFilter(kind, id, name) {
+  state.filter = state.filter && state.filter.kind === kind && state.filter.id === id ? null : { kind, id, name };
+  load();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function clearFilter() { if (state.filter) { state.filter = null; load(); } }
+
+// ---- popup menu ----
+let openMenuEl = null;
+function closeMenu() {
+  if (!openMenuEl) return;
+  openMenuEl.menu.remove();
+  openMenuEl.anchor.setAttribute('aria-expanded', 'false');
+  openMenuEl = null;
+}
+function showMenu(anchor, entries) {
+  closeMenu();
+  const m = document.createElement('div');
+  m.className = 'menu';
+  m.setAttribute('role', 'menu');
+  for (const e of entries) {
+    if (e === '-') { m.appendChild(document.createElement('hr')); continue; }
+    if (e.note) { const n = document.createElement('div'); n.className = 'note'; n.textContent = e.note; m.appendChild(n); continue; }
+    const b = document.createElement('button');
+    b.setAttribute('role', 'menuitem');
+    b.textContent = e.label;
+    b.onclick = () => { closeMenu(); e.run(); };
+    m.appendChild(b);
+  }
+  document.body.appendChild(m);
+  const r = anchor.getBoundingClientRect();
+  const left = Math.min(window.innerWidth - m.offsetWidth - 8, Math.max(8, r.right - m.offsetWidth));
+  const top = r.bottom + 4 + m.offsetHeight > window.innerHeight ? r.top - m.offsetHeight - 4 : r.bottom + 4;
+  m.style.left = left + 'px';
+  m.style.top = Math.max(8, top) + 'px';
+  anchor.setAttribute('aria-expanded', 'true');
+  openMenuEl = { menu: m, anchor };
+  m.querySelector('button')?.focus();
+}
+document.addEventListener('click', e => { if (openMenuEl && !openMenuEl.menu.contains(e.target) && e.target !== openMenuEl.anchor) closeMenu(); });
+window.addEventListener('scroll', closeMenu, { passive: true });
+window.addEventListener('resize', closeMenu);
+
+function openItemMenu(anchor, kind, item) {
+  if (openMenuEl && openMenuEl.anchor === anchor) { closeMenu(); return; }
+  const name = kind === 'app' ? item.name : item.domain;
+  const lim = limitFor(kind, item.id);
+  const filtered = state.filter && state.filter.kind === kind && state.filter.id === item.id;
+  const entries = [
+    { label: filtered ? 'Stop showing in chart' : 'Show in chart', run: () => toggleFilter(kind, item.id, name) },
+    { label: 'Rename…', run: () => renameItem(kind, item) },
+    { label: lim ? `Daily limit: ${fmtDur(lim.minutes * M)}…` : 'Set daily limit…', run: () => editLimit(kind, item.id, name) },
+    { label: kind === 'app' ? 'Merge into another app…' : 'Merge into another website…', run: () => mergeItem(kind, item) },
+  ];
+  if (item.merged) {
+    entries.push('-', { note: 'Merged into this one:' });
+    for (const m of item.merged) entries.push({ label: `Separate “${m.name}”`, run: () => itemMenuAction(kind, m.id, 'unmerge') });
+  }
+  entries.push('-', { label: item.hidden ? 'Unhide' : 'Hide from stats', run: () => itemMenuAction(kind, item.id, item.hidden ? 'unhide' : 'hide') });
+  showMenu(anchor, entries);
+}
+
+/** Throws on failure; menu entries use itemMenuAction, dialogs show the error inline. */
+async function itemAction(kind, id, action, value) {
+  await api.post('/api/item', { kind, id, action, value });
+  if ((action === 'merge' || action === 'hide') && state.filter && state.filter.kind === kind && state.filter.id === id) state.filter = null;
+  load();
+}
+const itemMenuAction = (...args) => itemAction(...args).catch(e => alertBox('Something went wrong', e.message));
+
+/** Wraps a dialog action: on error, show it in the dialog and keep the dialog open. */
+const guarded = fn => async () => {
+  try { await fn(); }
+  catch (e) {
+    $('dlgBody').querySelector('.dlg-error')?.remove();
+    $('dlgBody').insertAdjacentHTML('beforeend', `<p class="warnline dlg-error">${esc(e.message)}</p>`);
+    return false;
+  }
+};
+
+// ---- dialogs ----
+function openDialog({ title, body, actions, wide }) {
+  return new Promise(resolve => {
+    const d = $('dlg');
+    if (d.open) d.close();
+    d.classList.toggle('wide', !!wide);
+    $('dlgTitle').textContent = title;
+    $('dlgBody').innerHTML = body;
+    const box = $('dlgActions');
+    box.innerHTML = '';
+    let result = null;
+    for (const a of actions) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'btn' + (a.primary ? ' primary' : '') + (a.danger ? ' danger' : '') + (a.left ? ' left' : '');
+      b.textContent = a.label;
+      if (a.primary) b.dataset.primary = '1';
+      b.onclick = async () => {
+        if (a.run) {
+          box.querySelectorAll('button').forEach(x => x.disabled = true);
+          let keep;
+          try { keep = await a.run(d); } finally { box.querySelectorAll('button').forEach(x => x.disabled = false); }
+          if (keep === false) return;
+        }
+        result = a.value ?? true;
+        d.close();
+      };
+      box.appendChild(b);
+    }
+    $('dlgForm').onsubmit = e => { e.preventDefault(); box.querySelector('[data-primary]')?.click(); };
+    d.onclose = () => resolve(result);
+    d.showModal();
+    const f = $('dlgBody').querySelector('input:not([type=checkbox]),select');
+    if (f) { f.focus(); if (f.select) f.select(); }
+  });
+}
+const alertBox = (title, msg) => openDialog({ title, body: `<p>${esc(msg)}</p>`, actions: [{ label: 'OK', primary: true }] });
+
+async function renameItem(kind, item) {
+  const current = kind === 'app' ? item.name : item.domain;
+  const original = item.original || current;
+  await openDialog({
+    title: 'Rename',
+    body: `<label for="rn">Name</label><input type="text" id="rn" maxlength="80" value="${esc(current)}" placeholder="${esc(original)}">
+           <p style="margin-top:10px">${kind === 'app' ? `This only changes how it's shown. Detected as “${esc(original)}”${item.exe ? ` (${esc(item.exe)})` : ''}.` : `Detected as ${esc(original)}.`}</p>`,
+    actions: [
+      { label: 'Save', primary: true, run: guarded(() => itemAction(kind, item.id, 'rename', $('rn').value)) },
+      { label: 'Cancel' },
+      ...(item.original ? [{ label: 'Reset to original', left: true, run: guarded(() => itemAction(kind, item.id, 'rename', '')) }] : []),
+    ],
+  });
+}
+
+async function mergeItem(kind, item) {
+  let items;
+  try { items = await api.get('/api/items?kind=' + kind); } catch (e) { return alertBox('Something went wrong', e.message); }
+  const others = items.filter(i => i.id !== item.id);
+  if (!others.length) return alertBox('Nothing to merge with', `There's no other ${kind === 'app' ? 'app' : 'website'} yet.`);
+  const name = kind === 'app' ? item.name : item.domain;
+  await openDialog({
+    title: `Merge “${name}”`,
+    body: `<p>Combines its time with another ${kind === 'app' ? 'app' : 'website'} everywhere in the dashboard, for example when one app shows up twice. Nothing is deleted, and you can separate them again from the <b>⋯</b> menu.</p>
+           <label for="mt">Merge into</label><select id="mt">${others.map(o => `<option value="${o.id}">${esc(o.name)}${o.hint ? ' — ' + esc(o.hint) : ''}${o.hidden ? ' (hidden)' : ''}</option>`).join('')}</select>`,
+    actions: [
+      { label: 'Merge', primary: true, run: guarded(() => itemAction(kind, item.id, 'merge', +$('mt').value)) },
+      { label: 'Cancel' },
+    ],
+  });
+}
+
+async function editLimit(kind, id, name) {
+  const existing = kind ? limitFor(kind, id) : null;
+  let picker = '';
+  if (!kind) {
+    let apps = [], sites = [];
+    try { [apps, sites] = await Promise.all([api.get('/api/items?kind=app'), api.get('/api/items?kind=site')]); } catch {}
+    picker = `<label for="lt">Limit for</label><select id="lt"><option value="total:0">Total screen time</option>
+      ${apps.length ? `<optgroup label="Apps">${apps.map(a => `<option value="app:${a.id}">${esc(a.name)}${a.hint ? ' — ' + esc(a.hint) : ''}</option>`).join('')}</optgroup>` : ''}
+      ${sites.length ? `<optgroup label="Websites">${sites.map(s => `<option value="site:${s.id}">${esc(s.name)}</option>`).join('')}</optgroup>` : ''}</select>`;
+  }
+  const mins = existing ? existing.minutes : 60;
+  await openDialog({
+    title: kind ? `Daily limit for ${name}` : 'Add a daily limit',
+    body: `${picker}<label>Notify me after</label>
+      <div class="inline"><input type="number" id="lh" min="0" max="24" value="${Math.floor(mins / 60)}"> hours
+      <input type="number" id="lm" min="0" max="59" step="5" value="${mins % 60}"> minutes per day</div>
+      <p style="margin-top:10px">You'll get one Windows notification the first time you pass it each day. Tracking keeps going.</p>`,
+    actions: [
+      { label: 'Save', primary: true, run: async () => {
+          const minutes = (Math.max(0, +$('lh').value || 0)) * 60 + Math.max(0, Math.min(59, +$('lm').value || 0));
+          let k = kind, i = id;
+          if (!k) [k, i] = $('lt').value.split(':').map((v, j) => j ? +v : v);
+          if (minutes <= 0) { $('lm').focus(); return false; }
+          return guarded(async () => { await api.post('/api/limit', { kind: k, id: i, minutes }); load(); })();
+        } },
+      { label: 'Cancel' },
+      ...(existing ? [{ label: 'Remove limit', danger: true, left: true, run: guarded(async () => { await api.post('/api/limit', { kind, id, minutes: 0 }); load(); }) }] : []),
+    ],
+  });
+}
+
+// ---- ActivityWatch import ----
+async function openImport() {
+  let scan;
+  try { scan = await api.get('/api/import/scan'); } catch (e) { return alertBox('Something went wrong', e.message); }
+  const howTo = `<p>In ActivityWatch, open <b>Raw Data</b> and use <b>Export bucket</b> (JSON or CSV) on these buckets, saving them to your Downloads folder:</p>
+    <p><b>aw-watcher-window</b> (apps), <b>aw-watcher-afk</b> (so time away isn't counted) and <b>aw-watcher-web-…</b> (websites, optional).</p>`;
+  if (!scan.files.length) {
+    return openDialog({ title: 'Import from ActivityWatch', body: `<p>No ActivityWatch export files were found in <b>${esc(scan.folder)}</b>.</p>${howTo}`, actions: [{ label: 'OK', primary: true }] });
+  }
+  const size = b => b > 1048576 ? (b / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(b / 1024)) + ' KB';
+  await openDialog({
+    title: 'Import from ActivityWatch',
+    body: `<p>Adds your ActivityWatch history to Screen Time. Times Screen Time already recorded, or that you imported before, are skipped, so nothing is overwritten or counted twice. Import the window, AFK and web files together.</p>
+      <div class="files">${scan.files.map((f, i) => `<label><input type="checkbox" value="${esc(f.name)}" checked><span>${esc(f.kind)}<small>${esc(f.name)} · ${size(f.size)} · ${esc(f.modified)}</small></span></label>`).join('')}</div>
+      <div id="impStatus"></div>`,
+    actions: [
+      { label: 'Import', primary: true, run: async () => {
+          const files = [...$('dlgBody').querySelectorAll('.files input:checked')].map(c => c.value);
+          if (!files.length) return false;
+          $('impStatus').innerHTML = '<p><span class="spinner"></span>Importing… big exports can take a little while.</p>';
+          try {
+            const r = await api.post('/api/import', { files });
+            $('dlg').close();
+            await showImportResult(r);
+            const [f] = presetRange('all');
+            if (state.preset === 'all' || r.from < f) await loadNow();
+            load();
+          } catch (e) {
+            $('impStatus').innerHTML = `<p class="warnline">${esc(e.message)}</p>`;
+          }
+          return false;
+        } },
+      { label: 'Cancel' },
+    ],
+  });
+}
+
+function showImportResult(r) {
+  const range = r.from === r.to ? fmtDate(r.from, { month: 'long', day: 'numeric', year: 'numeric' })
+    : fmtDate(r.from, { month: 'short', day: 'numeric', year: 'numeric' }) + ' – ' + fmtDate(r.to, { month: 'short', day: 'numeric', year: 'numeric' });
+  return openDialog({
+    title: r.appMs > 0 ? 'Import finished' : 'Nothing new to import',
+    body: `<div class="result">
+        <span>Period in files</span><b>${esc(range)}</b>
+        <span>App time added</span><b>${fmtDur(r.appMs)} across ${r.apps} app${r.apps === 1 ? '' : 's'}</b>
+        <span>Website time added</span><b>${fmtDur(r.siteMs)} across ${r.sites} website${r.sites === 1 ? '' : 's'}</b>
+        <span>Skipped (already recorded)</span><b>${fmtDur(r.skippedMs)}</b>
+      </div>${r.warning ? `<p class="warnline">${esc(r.warning)}</p>` : ''}
+      <p>If an imported app shows up twice, use <b>⋯ → Merge</b> to combine them.</p>`,
+    actions: [{ label: 'Done', primary: true }],
+  });
+}
+
+// ---- settings ----
+async function openSettings() {
+  let st;
+  try { st = await api.get('/api/settings'); } catch (e) { return alertBox('Something went wrong', e.message); }
+  const opt = m => `<option value="${m}"${m === st.idleMinutes ? ' selected' : ''}>${m} minute${m === 1 ? '' : 's'}</option>`;
+  const shown = openDialog({
+    title: 'Settings',
+    body: `
+      <label class="setting"><input type="checkbox" id="sOpen"${st.trackOpen ? ' checked' : ''}>
+        <span><b>Track open time</b><small>Next to how long you use an app or website, also record how long it's open: an app with any window open, a website with any tab open. Turn this off to only track usage.</small></span></label>
+      <label class="setting"><input type="checkbox" id="sMedia"${st.countMedia ? ' checked' : ''}>
+        <span><b>Keep counting while the app plays sound</b><small>Watching a video or sitting on a call without touching the mouse still counts as usage.</small></span></label>
+      <label class="setting"><input type="checkbox" id="sAuto"${st.autoStart ? ' checked' : ''}>
+        <span><b>Start with Windows</b><small>Start tracking automatically when you sign in.</small></span></label>
+      <label class="setting"><input type="checkbox" id="sUpd"${st.autoUpdate ? ' checked' : ''}>
+        <span><b>Install updates automatically</b><small>New versions install in the background and Screen Time restarts within a few seconds. Your history is kept. When this is off, you're asked first.</small></span></label>
+      <label for="sIdle">Idle timeout</label>
+      <select id="sIdle">${[1, 2, 3, 5, 10, 15, 30].map(opt).join('')}</select>
+      <p style="margin-top:6px;font-size:12.5px">After this long without mouse or keyboard input you count as away, and that time isn't counted as usage.</p>
+      <label>Browser trackers</label>
+      <p style="font-size:12.5px;margin:0 0 8px">Group your browsers and profiles (e.g. Work, Personal) and choose what counts toward “All Time”.</p>
+      <button type="button" class="btn" id="sTrackers">Manage browser trackers…</button>
+      <label>Updates</label>
+      <p style="font-size:12.5px;margin:0 0 8px" id="sUpdText">${esc(updateText(state.now && state.now.update))}</p>
+      <button type="button" class="btn" id="sCheck">Check for updates</button>
+      <p class="dlg-error" id="sErr" hidden></p>`,
+    actions: [{ label: 'Done', primary: true }],
+  });
+  const save = async body => {
+    try { await api.post('/api/settings', body); $('sErr').hidden = true; }
+    catch (e) { $('sErr').hidden = false; $('sErr').className = 'warnline dlg-error'; $('sErr').textContent = e.message; }
+  };
+  $('sOpen').onchange = e => save({ trackOpen: e.target.checked });
+  $('sMedia').onchange = e => save({ countMedia: e.target.checked });
+  $('sAuto').onchange = e => save({ autoStart: e.target.checked });
+  $('sIdle').onchange = e => save({ idleMinutes: +e.target.value });
+  $('sUpd').onchange = e => save({ autoUpdate: e.target.checked });
+  $('sTrackers').onclick = () => openTrackers();
+  $('sCheck').onclick = async () => {
+    $('sCheck').disabled = true;
+    const u = await checkUpdates();
+    if ($('sUpdText')) $('sUpdText').textContent = updateText(u);
+    if ($('sCheck')) $('sCheck').disabled = false;
+  };
+  await shown;
+  loadNow();
+  load();
+}
+$('settingsBtn').onclick = openSettings;
+$('manageTrackers').onclick = openTrackers;
+
+// ---- updates ----
+function updateText(u) {
+  if (!u) return '';
+  const last = u.lastCheck ? ' Last checked ' + new Date(u.lastCheck).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) + '.' : '';
+  switch (u.state) {
+    case 'checking': return 'Checking for updates…';
+    case 'available': return `Version ${u.latest} is available (you have ${u.current}).`;
+    case 'downloading': return `Downloading Screen Time ${u.latest}… ${u.percent || 0}%`;
+    case 'installing': return 'Installing the update. Screen Time restarts in a few seconds and this page reloads.';
+    case 'failed': return (u.error || 'The update check failed.') + last;
+    case 'uptodate': return `You have the latest version (${u.current}).` + last;
+    default: return `You have version ${u.current}. Screen Time checks for updates every few hours.`;
+  }
+}
+
+function renderUpdate(u) {
+  const b = $('updBanner');
+  const dismissed = u && u.latest && ls.get('st.updLater') === u.latest;
+  const show = !!u && (u.state === 'downloading' || u.state === 'installing'
+    || (!!u.latest && (u.state === 'available' || u.state === 'failed') && !dismissed));
+  b.hidden = !show;
+  b.classList.toggle('bad', show && u.state === 'failed');
+  if (!show) { b.dataset.k = ''; return; }
+  const key = u.state + u.latest + (u.percent || 0) + (u.error || '');
+  if (b.dataset.k === key) return;   // unchanged: don't steal focus from its buttons
+  b.dataset.k = key;
+  if (u.state === 'downloading' || u.state === 'installing') {
+    b.innerHTML = `<span class="spinner"></span><span class="msg">${esc(updateText(u))}</span>`;
+    return;
+  }
+  b.innerHTML = `<span class="msg">${u.state === 'failed'
+      ? `<b>Couldn't install Screen Time ${esc(u.latest)}.</b> ${esc(u.error || '')}`
+      : `<b>Screen Time ${esc(u.latest)} is available.</b> You have ${esc(u.current)}. Your history is kept.`}</span>
+    <span class="acts"><button class="btn" id="updNotes">What's new</button>
+    <button class="btn primary" id="updInstall">${u.state === 'failed' ? 'Try again' : 'Update now'}</button>
+    <button class="btn" id="updLater">Later</button></span>`;
+  $('updNotes').onclick = () => showNotes(u);
+  $('updInstall').onclick = () => updateAction('install');
+  $('updLater').onclick = () => { ls.set('st.updLater', u.latest); renderUpdate(u); };
+}
+
+function showNotes(u) {
+  return openDialog({
+    title: u.name || `Screen Time ${u.latest}`,
+    body: `<div class="notes">${esc(u.notes || 'No release notes.')}</div>
+      ${u.url ? `<p style="margin-top:10px"><a href="${esc(u.url)}" target="_blank" rel="noopener noreferrer">View on GitHub</a></p>` : ''}`,
+    actions: [{ label: 'Update now', primary: true, run: () => { updateAction('install'); } }, { label: 'Close' }],
+  });
+}
+
+async function updateAction(action) {
+  try {
+    const u = await api.post('/api/update', { action });
+    if (state.now) state.now.update = u;
+    renderUpdate(u);
+    return u;
+  } catch (e) { alertBox('Something went wrong', e.message); return null; }
+}
+
+/** Checks now and waits (up to ~30 s) for GitHub's answer. */
+async function checkUpdates() {
+  let u = await updateAction('check');
+  for (let i = 0; u && u.state === 'checking' && i < 60; i++) {
+    await new Promise(r => setTimeout(r, 500));
+    try { u = (await api.get('/api/now')).update; } catch { break; }
+  }
+  if (u) renderUpdate(u);
+  return u;
+}
+
+$('checkUpdates').onclick = async () => {
+  const btn = $('checkUpdates');
+  btn.disabled = true; btn.textContent = 'Checking…';
+  const u = await checkUpdates();
+  btn.disabled = false; btn.textContent = 'Check for updates';
+  if (u && u.state !== 'available' && u.state !== 'downloading' && u.state !== 'installing')
+    alertBox(u.state === 'failed' ? "Couldn't check for updates" : 'No updates', updateText(u));
+};
+
+// ---- pause ----
+async function setPause(minutes) {
+  try { await api.post('/api/pause', { minutes }); } catch (e) { return alertBox('Something went wrong', e.message); }
+  setTimeout(loadNow, 150);   // the tray app applies it on its own thread
+}
+function openPauseMenu() {
+  const anchor = $('pauseBtn');
+  if (openMenuEl && openMenuEl.anchor === anchor) { closeMenu(); return; }
+  if (state.now && state.now.paused) return setPause(0);
+  showMenu(anchor, [
+    { note: 'Pause tracking' },
+    { label: 'For 15 minutes', run: () => setPause(15) },
+    { label: 'For 1 hour', run: () => setPause(60) },
+    { label: 'For 3 hours', run: () => setPause(180) },
+    { label: 'Until tomorrow', run: () => setPause(-2) },
+    { label: 'Until I resume', run: () => setPause(-1) },
+  ]);
+}
+$('pauseBtn').onclick = openPauseMenu;
+
+// ---- theme ----
+const THEMES = ['auto', 'light', 'dark'];
+function applyTheme(t) {
+  if (t === 'auto') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = t;
+  const label = { auto: 'Theme: automatic', light: 'Theme: light', dark: 'Theme: dark' }[t];
+  $('themeBtn').textContent = { auto: '◐', light: '☀', dark: '☾' }[t];
+  $('themeBtn').title = label; $('themeBtn').setAttribute('aria-label', label);
+}
+let theme = ls.get('st.theme') || 'auto';
+applyTheme(theme);
+$('themeBtn').onclick = () => { theme = THEMES[(THEMES.indexOf(theme) + 1) % 3]; ls.set('st.theme', theme); applyTheme(theme); if (state.data) render(); };
+
+// ---- wiring ----
+$('presets').addEventListener('click', e => { const b = e.target.closest('button'); if (b) setPreset(b.dataset.p); });
+$('prev').onclick = () => shift(-1);
+$('next').onclick = () => shift(1);
+for (const id of ['cFrom', 'cTo']) $(id).addEventListener('change', () => {
+  if (!$('cFrom').value || !$('cTo').value) return;
+  let f = intOfIso($('cFrom').value), t = intOfIso($('cTo').value);
+  if (f > t) [f, t] = [t, f];
+  state.from = f; state.to = Math.min(t, todayInt()); state.preset = 'custom';
+  load();
+});
+$('tableToggle').onclick = () => {
+  state.table = !state.table;
+  $('tableToggle').setAttribute('aria-pressed', String(state.table));
+  $('tableToggle').textContent = state.table ? 'Chart' : 'Table';
+  if (state.data) renderChart();
+};
+$('appSearch').addEventListener('input', () => state.data && renderList('apps', state.data.apps, $('appSearch').value));
+$('siteSearch').addEventListener('input', () => state.data && renderList('sites', state.data.sites, $('siteSearch').value));
+$('showHidden').onchange = () => { state.showHidden = $('showHidden').checked; ls.set('st.hidden', state.showHidden ? '1' : '0'); load(); };
+$('addLimit').onclick = () => editLimit(null, 0, '');
+$('importBtn').onclick = openImport;
+new ResizeObserver(() => state.data && !state.table && renderChart()).observe($('chart'));
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { loadNow(); load(true); } });
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { if (openMenuEl) { closeMenu(); return; } if (!$('dlg').open) clearFilter(); return; }
+  if ($('dlg').open || e.ctrlKey || e.metaKey || e.altKey || /^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)) return;
+  const map = { t: 'today', y: 'yesterday', w: '7d', m: '30d', a: 'all' };
+  if (e.key === 'ArrowLeft') shift(-1);
+  else if (e.key === 'ArrowRight') shift(1);
+  else if (e.key === '/') $('appSearch').focus();
+  else if (e.key.toLowerCase() === 'p') openPauseMenu();
+  else if (map[e.key.toLowerCase()]) setPreset(map[e.key.toLowerCase()]);
+  else return;
+  e.preventDefault();
+});
+
+setInterval(() => { if (!document.hidden) loadNow(); }, 5000);
+setInterval(() => { if (!document.hidden && state.to >= todayInt() && !$('dlg').open) load(true); }, 30000);
+
+loadNow().then(() => setPreset(state.preset));
+</script>
+</body>
+</html>

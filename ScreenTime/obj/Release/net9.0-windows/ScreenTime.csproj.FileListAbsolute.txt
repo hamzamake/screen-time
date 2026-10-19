@@ -1,0 +1,20 @@
+C:\Users\HamzaTom\AppData\Local\Temp\claude\C--Users-HamzaTom-Desktop-Dont-Touch-software-files-time-tracker-for-pc\acb2aeae-a127-4f74-86fd-5c6a195cb1a8\scratchpad\buildcheck\ScreenTime.exe
+C:\Users\HamzaTom\AppData\Local\Temp\claude\C--Users-HamzaTom-Desktop-Dont-Touch-software-files-time-tracker-for-pc\acb2aeae-a127-4f74-86fd-5c6a195cb1a8\scratchpad\buildcheck\ScreenTime.deps.json
+C:\Users\HamzaTom\AppData\Local\Temp\claude\C--Users-HamzaTom-Desktop-Dont-Touch-software-files-time-tracker-for-pc\acb2aeae-a127-4f74-86fd-5c6a195cb1a8\scratchpad\buildcheck\ScreenTime.runtimeconfig.json
+C:\Users\HamzaTom\AppData\Local\Temp\claude\C--Users-HamzaTom-Desktop-Dont-Touch-software-files-time-tracker-for-pc\acb2aeae-a127-4f74-86fd-5c6a195cb1a8\scratchpad\buildcheck\ScreenTime.dll
+C:\Users\HamzaTom\Desktop\Dont Touch\software files\time tracker for pc\ScreenTime\obj\Release\net9.0-windows\ScreenTime.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\HamzaTom\Desktop\Dont Touch\software files\time tracker for pc\ScreenTime\obj\Release\net9.0-windows\ScreenTime.AssemblyInfoInputs.cache
+C:\Users\HamzaTom\Desktop\Dont Touch\software files\time tracker for pc\ScreenTime\obj\Release\net9.0-windows\ScreenTime.AssemblyInfo.cs
+C:\Users\HamzaTom\Desktop\Dont Touch\software files\time tracker for pc\ScreenTime\obj\Release\net9.0-windows\ScreenTime.csproj.CoreCompileInputs.cache
+C:\Users\HamzaTom\Desktop\Dont Touch\software files\time tracker for pc\ScreenTime\obj\Release\net9.0-windows\ScreenTime.dll
+C:\Users\HamzaTom\Desktop\Dont Touch\software files\time tracker for pc\ScreenTime\obj\Release\net9.0-windows\refint\ScreenTime.dll
+C:\Users\HamzaTom\Desktop\Dont Touch\software files\time tracker for pc\ScreenTime\obj\Release\net9.0-windows\ScreenTime.genruntimeconfig.cache
+C:\Users\HamzaTom\Desktop\Dont Touch\software files\time tracker for pc\ScreenTime\obj\Release\net9.0-windows\ref\ScreenTime.dll
+C:\Users\HamzaTom\AppData\Local\Temp\claude\C--Users-HamzaTom-Desktop-Dont-Touch-software-files-time-tracker-for-pc\2470d313-c1a9-4f54-bf06-a5c9d0fe3d91\scratchpad\appbuild\ScreenTime.exe
+C:\Users\HamzaTom\AppData\Local\Temp\claude\C--Users-HamzaTom-Desktop-Dont-Touch-software-files-time-tracker-for-pc\2470d313-c1a9-4f54-bf06-a5c9d0fe3d91\scratchpad\appbuild\ScreenTime.deps.json
+C:\Users\HamzaTom\AppData\Local\Temp\claude\C--Users-HamzaTom-Desktop-Dont-Touch-software-files-time-tracker-for-pc\2470d313-c1a9-4f54-bf06-a5c9d0fe3d91\scratchpad\appbuild\ScreenTime.runtimeconfig.json
+C:\Users\HamzaTom\AppData\Local\Temp\claude\C--Users-HamzaTom-Desktop-Dont-Touch-software-files-time-tracker-for-pc\2470d313-c1a9-4f54-bf06-a5c9d0fe3d91\scratchpad\appbuild\ScreenTime.dll
+C:\Users\HamzaTom\Desktop\Dont Touch\software files\time tracker for pc\ScreenTime\bin\Release\net9.0-windows\ScreenTime.exe
+C:\Users\HamzaTom\Desktop\Dont Touch\software files\time tracker for pc\ScreenTime\bin\Release\net9.0-windows\ScreenTime.deps.json
+C:\Users\HamzaTom\Desktop\Dont Touch\software files\time tracker for pc\ScreenTime\bin\Release\net9.0-windows\ScreenTime.runtimeconfig.json
+C:\Users\HamzaTom\Desktop\Dont Touch\software files\time tracker for pc\ScreenTime\bin\Release\net9.0-windows\ScreenTime.dll
