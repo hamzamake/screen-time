@@ -6,3 +6,11 @@ C:\Users\HamzaTom\Desktop\Dont Touch\software files\time tracker for pc\installe
 C:\Users\HamzaTom\Desktop\Dont Touch\software files\time tracker for pc\installer\obj\Release\net48\Setup.AssemblyInfo.cs
 C:\Users\HamzaTom\Desktop\Dont Touch\software files\time tracker for pc\installer\obj\Release\net48\Setup.csproj.CoreCompileInputs.cache
 C:\Users\HamzaTom\Desktop\Dont Touch\software files\time tracker for pc\installer\obj\Release\net48\ScreenTime-Setup.exe
+C:\Users\HamzaTom\Documents\GitHub\screen-time\build\setup\ScreenTime-Setup.exe.config
+C:\Users\HamzaTom\Documents\GitHub\screen-time\build\setup\ScreenTime-Setup.exe
+C:\Users\HamzaTom\Documents\GitHub\screen-time\installer\obj\Release\net48\Setup.csproj.AssemblyReference.cache
+C:\Users\HamzaTom\Documents\GitHub\screen-time\installer\obj\Release\net48\Setup.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\HamzaTom\Documents\GitHub\screen-time\installer\obj\Release\net48\Setup.AssemblyInfoInputs.cache
+C:\Users\HamzaTom\Documents\GitHub\screen-time\installer\obj\Release\net48\Setup.AssemblyInfo.cs
+C:\Users\HamzaTom\Documents\GitHub\screen-time\installer\obj\Release\net48\Setup.csproj.CoreCompileInputs.cache
+C:\Users\HamzaTom\Documents\GitHub\screen-time\installer\obj\Release\net48\ScreenTime-Setup.exe

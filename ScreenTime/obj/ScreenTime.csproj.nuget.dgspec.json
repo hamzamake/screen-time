@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\HamzaTom\\Desktop\\Dont Touch\\software files\\time tracker for pc\\ScreenTime\\ScreenTime.csproj": {}
+    "C:\\Users\\HamzaTom\\Documents\\GitHub\\screen-time\\ScreenTime\\ScreenTime.csproj": {}
   },
   "projects": {
-    "C:\\Users\\HamzaTom\\Desktop\\Dont Touch\\software files\\time tracker for pc\\ScreenTime\\ScreenTime.csproj": {
-      "version": "1.0.0",
+    "C:\\Users\\HamzaTom\\Documents\\GitHub\\screen-time\\ScreenTime\\ScreenTime.csproj": {
+      "version": "1.4.3",
       "restore": {
-        "projectUniqueName": "C:\\Users\\HamzaTom\\Desktop\\Dont Touch\\software files\\time tracker for pc\\ScreenTime\\ScreenTime.csproj",
+        "projectUniqueName": "C:\\Users\\HamzaTom\\Documents\\GitHub\\screen-time\\ScreenTime\\ScreenTime.csproj",
         "projectName": "ScreenTime",
-        "projectPath": "C:\\Users\\HamzaTom\\Desktop\\Dont Touch\\software files\\time tracker for pc\\ScreenTime\\ScreenTime.csproj",
+        "projectPath": "C:\\Users\\HamzaTom\\Documents\\GitHub\\screen-time\\ScreenTime\\ScreenTime.csproj",
         "packagesPath": "C:\\Users\\HamzaTom\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\HamzaTom\\Desktop\\Dont Touch\\software files\\time tracker for pc\\ScreenTime\\obj\\",
+        "outputPath": "C:\\Users\\HamzaTom\\Documents\\GitHub\\screen-time\\ScreenTime\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
@@ -51,6 +51,14 @@
         "net9.0-windows": {
           "framework": "net9.0-windows7.0",
           "targetAlias": "net9.0-windows",
+          "dependencies": {
+            "Microsoft.NET.ILLink.Tasks": {
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[9.0.21, )",
+              "autoReferenced": true
+            }
+          },
           "imports": [
             "net461",
             "net462",
@@ -68,6 +76,10 @@
               "version": "[9.0.21, 9.0.21]"
             },
             {
+              "name": "Microsoft.AspNetCore.App.Runtime.win-x64",
+              "version": "[9.0.21, 9.0.21]"
+            },
+            {
               "name": "Microsoft.NETCore.App.Host.win-x64",
               "version": "[9.0.21, 9.0.21]"
             },
@@ -76,7 +88,15 @@
               "version": "[9.0.21, 9.0.21]"
             },
             {
+              "name": "Microsoft.NETCore.App.Runtime.win-x64",
+              "version": "[9.0.21, 9.0.21]"
+            },
+            {
               "name": "Microsoft.WindowsDesktop.App.Ref",
+              "version": "[9.0.21, 9.0.21]"
+            },
+            {
+              "name": "Microsoft.WindowsDesktop.App.Runtime.win-x64",
               "version": "[9.0.21, 9.0.21]"
             }
           ],
@@ -89,6 +109,11 @@
             }
           },
           "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.402/PortableRuntimeIdentifierGraph.json"
+        }
+      },
+      "runtimes": {
+        "win-x64": {
+          "#import": []
         }
       }
     }

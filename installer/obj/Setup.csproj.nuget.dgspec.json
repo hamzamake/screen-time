@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\HamzaTom\\Desktop\\Dont Touch\\software files\\time tracker for pc\\installer\\Setup.csproj": {}
+    "C:\\Users\\HamzaTom\\Documents\\GitHub\\screen-time\\installer\\Setup.csproj": {}
   },
   "projects": {
-    "C:\\Users\\HamzaTom\\Desktop\\Dont Touch\\software files\\time tracker for pc\\installer\\Setup.csproj": {
-      "version": "1.4.0",
+    "C:\\Users\\HamzaTom\\Documents\\GitHub\\screen-time\\installer\\Setup.csproj": {
+      "version": "1.4.3",
       "restore": {
-        "projectUniqueName": "C:\\Users\\HamzaTom\\Desktop\\Dont Touch\\software files\\time tracker for pc\\installer\\Setup.csproj",
+        "projectUniqueName": "C:\\Users\\HamzaTom\\Documents\\GitHub\\screen-time\\installer\\Setup.csproj",
         "projectName": "ScreenTime-Setup",
-        "projectPath": "C:\\Users\\HamzaTom\\Desktop\\Dont Touch\\software files\\time tracker for pc\\installer\\Setup.csproj",
+        "projectPath": "C:\\Users\\HamzaTom\\Documents\\GitHub\\screen-time\\installer\\Setup.csproj",
         "packagesPath": "C:\\Users\\HamzaTom\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\HamzaTom\\Desktop\\Dont Touch\\software files\\time tracker for pc\\installer\\obj\\",
+        "outputPath": "C:\\Users\\HamzaTom\\Documents\\GitHub\\screen-time\\installer\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
