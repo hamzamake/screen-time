@@ -327,7 +327,8 @@ kbd{font:11px var(--font);border:1px solid var(--border);border-bottom-width:2px
 
   <section class="card section" id="allCard" hidden>
     <div class="card-head"><h2>All activity</h2><span class="meta">apps and websites together, most time first</span><span class="spacer"></span>
-      <span class="key"><i style="background:var(--series-app)"></i>App</span><span class="key"><i style="background:var(--series-site)"></i>Website</span></div>
+      <span class="key"><i style="background:var(--series-app)"></i>App</span><span class="key"><i style="background:var(--series-site)"></i>Website</span>
+      <button class="link-btn" id="allNoBrowsers" aria-pressed="false" title="Leave out browser time where no website was detected">Hide browsers</button></div>
     <div class="hbars" id="allBars"></div>
     <div class="tip" id="allTip"></div>
   </section>
@@ -411,7 +412,7 @@ const WEEKDAYS_LONG = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', '
 // ---- state ----
 const state = {
   preset: 'today', from: 0, to: 0, filter: null, table: false, firstDay: 0, data: null, limits: [], extSeen: -1,
-  showAll: { apps: false, sites: false, all: false }, showHidden: ls.get('st.hidden') === '1',
+  showAll: { apps: false, sites: false, all: false }, showHidden: ls.get('st.hidden') === '1', noBrowsers: ls.get('st.noBrowsers') === '1',
   sortOpen: { apps: false, sites: false }, trackers: null, deletingGroup: 0, now: null, version: null,
 };
 { const p = ls.get('st.preset'); if (p && p !== 'custom' && p !== 'range') state.preset = p; }
@@ -882,7 +883,7 @@ function combinedItems() {
   const inSites = Math.min(siteTotal, browserTotal);
   const out = [];
   for (const a of d.apps) {
-    if (a.ms <= 0) continue;
+    if (a.ms <= 0 || (a.browser && state.noBrowsers)) continue;
     const ms = a.browser && browserTotal > 0 ? a.ms - inSites * (a.ms / browserTotal) : a.ms;
     if (ms >= 1000) out.push({ kind: 'app', id: a.id, name: a.name, extra: a.browser && inSites > 0 ? 'other pages' : '', ms, icon: `/icon/app/${a.id}` });
   }
@@ -912,7 +913,7 @@ function renderAll() {
     const x = shown[+r.dataset.i];
     r.onclick = () => toggleFilter(x.kind, x.id, x.name);
     r.onmouseenter = () => {
-      tip.innerHTML = `<b>${fmtDur(x.ms)}</b><span>${Math.round(x.ms / total * 100)}% of all your time · ${x.kind === 'site' ? 'website' : x.extra ? 'browser, no website detected' : 'app'}</span>`;
+      tip.innerHTML = `<b>${fmtDur(x.ms)}</b><span>${Math.round(x.ms / total * 100)}% of ${state.noBrowsers ? 'the time shown' : 'all your time'} ·${x.kind === 'site' ? 'website' : x.extra ? 'browser, no website detected' : 'app'}</span>`;
       tip.style.opacity = 1;
       const br = bars.getBoundingClientRect(), rr = r.getBoundingClientRect();
       tip.style.left = Math.max(0, Math.min(br.width - tip.offsetWidth, rr.right - br.left - tip.offsetWidth - 80)) + 'px';
@@ -1425,6 +1426,17 @@ $('tableToggle').onclick = () => {
   $('tableToggle').setAttribute('aria-pressed', String(state.table));
   $('tableToggle').textContent = state.table ? 'Chart' : 'Table';
   if (state.data) renderChart();
+};
+function syncNoBrowsers() {
+  $('allNoBrowsers').setAttribute('aria-pressed', String(state.noBrowsers));
+  $('allNoBrowsers').textContent = state.noBrowsers ? 'Show browsers' : 'Hide browsers';
+}
+syncNoBrowsers();
+$('allNoBrowsers').onclick = () => {
+  state.noBrowsers = !state.noBrowsers;
+  ls.set('st.noBrowsers', state.noBrowsers ? '1' : '0');
+  syncNoBrowsers();
+  if (state.data) renderAll();
 };
 $('appSearch').addEventListener('input', () => state.data && renderList('apps', state.data.apps, $('appSearch').value));
 $('siteSearch').addEventListener('input', () => state.data && renderList('sites', state.data.sites, $('siteSearch').value));

@@ -7,7 +7,7 @@
   "targets": {
     ".NETCoreApp,Version=v9.0": {},
     ".NETCoreApp,Version=v9.0/win-x64": {
-      "ScreenTime/1.4.1": {
+      "ScreenTime/1.4.0": {
         "dependencies": {
           "runtimepack.Microsoft.NETCore.App.Runtime.win-x64": "9.0.21",
           "runtimepack.Microsoft.WindowsDesktop.App.Runtime.win-x64": "9.0.21"
@@ -811,7 +811,7 @@
     }
   },
   "libraries": {
-    "ScreenTime/1.4.1": {
+    "ScreenTime/1.4.0": {
       "type": "project",
       "serviceable": false,
       "sha512": ""
