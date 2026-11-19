@@ -78,6 +78,15 @@ internal sealed class Tracker
     public volatile bool Paused;
     public volatile bool Locked;
     public volatile bool TrackOpenTime = true;
+    public volatile bool IgnoreMacros;   // only input that comes from you counts (see InputWatch)
+    private bool _macro;                  // a program is sending input while you're not
+
+    /// <summary>Last keyboard/mouse input, leaving out what autoclickers and macros send when that option is on.</summary>
+    private uint LastInput()
+    {
+        uint t = Native.LastInputTick();
+        return IgnoreMacros ? InputWatch.LastRealInput(t) : t;
+    }
 
     /// <summary>Where the foreground window comes from (tests point this at a known window).</summary>
     internal Func<IntPtr> ForegroundWindow = Native.GetForegroundWindow;
@@ -86,7 +95,7 @@ internal sealed class Tracker
     {
         _db = db;
         _lastTick = _lastFlush = _lastPidClear = _lastOpenSample = Environment.TickCount64;
-        _lastInput = Native.LastInputTick();
+        _lastInput = LastInput();
     }
 
     /// <summary>Called once per second on the UI thread. Returns true when data was flushed to disk.</summary>
@@ -97,7 +106,7 @@ internal sealed class Tracker
         _lastTick = now;
         if (delta < 0 || delta > 5000) delta = 0;   // resumed from sleep or clock weirdness: count nothing
 
-        uint lastInput = Native.LastInputTick();
+        uint lastInput = LastInput();
         uint idle = unchecked((uint)Environment.TickCount - lastInput);
         bool hadInput = lastInput != _lastInput;
         _lastInput = lastInput;
@@ -111,7 +120,9 @@ internal sealed class Tracker
             else
             {
                 bool media = false;
-                if (CountMedia && idle >= 30_000)
+                // Sound doesn't keep a macro session counting: an AFK-grinding game makes sound too.
+                _macro = IgnoreMacros && idle >= 30_000 && InputWatch.FakeWithin((int)MediaGraceMs);
+                if (CountMedia && idle >= 30_000 && !_macro)
                 {
                     // Sound only decides anything once the idle timeout is reached (until then, the next input
                     // commits the time anyway), so check every 30s before that and every 10s after it (a check costs a few ms).
@@ -320,7 +331,7 @@ internal sealed class Tracker
     {
         lock (_sync)
         {
-            uint idle = unchecked((uint)Environment.TickCount - Native.LastInputTick());
+            uint idle = unchecked((uint)Environment.TickCount - LastInput());
             if (idle < (uint)IdleTimeoutMs && !Paused && !Locked) Commit();
             else _pending.Clear();
             FlushLocked();
@@ -341,8 +352,8 @@ internal sealed class Tracker
         lock (_sync)
         {
             long now = Environment.TickCount64;
-            uint idle = unchecked((uint)Environment.TickCount - Native.LastInputTick());
-            bool active = !Paused && !Locked && (idle < (uint)IdleTimeoutMs || CountMedia && now - _lastSoundAt < MediaGraceMs);
+            uint idle = unchecked((uint)Environment.TickCount - LastInput());
+            bool active = !Paused && !Locked && (idle < (uint)IdleTimeoutMs || CountMedia && !_macro && now - _lastSoundAt < MediaGraceMs);
             bool open = TrackOpenTime && !Paused && !Locked && now - _lastOpenSample <= 3 * OpenSampleMs;
             var buf = new ArrayBufferWriter<byte>(1024);
             using (var w = new Utf8JsonWriter(buf))
@@ -506,6 +517,7 @@ internal sealed class Tracker
 
             uint idle = unchecked((uint)Environment.TickCount - _lastInput);
             bool away = idle >= (uint)IdleTimeoutMs;
+            if (_macro && idle >= 30_000) return new Status("macro", null, null, extAgo);
             if (away && !(CountMedia && now - _lastSoundAt < MediaGraceMs)) return new Status("idle", null, null, extAgo);
 
             string site = FrontInstance(now) is { SiteId: >= 0 } front ? front.Domain : null;

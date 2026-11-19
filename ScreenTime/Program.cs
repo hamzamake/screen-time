@@ -71,7 +71,7 @@ internal sealed class TrayApp : ApplicationContext
     private readonly NotifyIcon _tray;
     private readonly ContextMenuStrip _menu;
     private readonly System.Windows.Forms.Timer _timer;
-    private readonly ToolStripMenuItem _pauseMenu, _resumeItem, _mediaItem, _openItem, _startupItem, _idleMenu, _updateItem;
+    private readonly ToolStripMenuItem _pauseMenu, _resumeItem, _mediaItem, _macroItem, _openItem, _startupItem, _idleMenu, _updateItem;
     private readonly Settings _settings;
     private readonly Updater _updater;
     private bool _manualUpdateCheck;
@@ -91,7 +91,7 @@ internal sealed class TrayApp : ApplicationContext
         _db.StartSession();
         _tracker = new Tracker(db);
         _settings = new Settings(db, _tracker);
-        _updater = new Updater(_settings, isAway: () => _tracker.Now().State is "idle" or "locked");
+        _updater = new Updater(_settings, isAway: () => _tracker.Now().State is "idle" or "locked" or "macro");
 
         // ---- tray menu ----
         _menu = new ContextMenuStrip();
@@ -117,13 +117,15 @@ internal sealed class TrayApp : ApplicationContext
         }
         _mediaItem = new ToolStripMenuItem("Keep counting while app plays sound", null, (_, _) => _settings.CountMedia = !_settings.CountMedia)
             { Checked = _tracker.CountMedia, ToolTipText = "When you're not touching the mouse/keyboard but the app in front is playing sound (a video, a call), keep counting." };
+        _macroItem = new ToolStripMenuItem("Don't count autoclickers and macros", null, (_, _) => _settings.IgnoreMacros = !_settings.IgnoreMacros)
+            { Checked = _tracker.IgnoreMacros, ToolTipText = "Input sent by programs (autoclickers, TinyTask) doesn't keep you active. Only your own mouse and keyboard do." };
         _openItem = new ToolStripMenuItem("Track open time", null, (_, _) => _settings.TrackOpenTime = !_settings.TrackOpenTime)
             { Checked = _tracker.TrackOpenTime, ToolTipText = "Also record how long apps and websites are open, not just how long you use them." };
         _startupItem = new ToolStripMenuItem("Start with Windows", null, (_, _) => _settings.AutoStart = !_settings.AutoStart);
         _updateItem = new ToolStripMenuItem("Check for updates", null, (_, _) => OnUpdateItem())
             { ShortcutKeyDisplayString = "v" + Updater.CurrentText };
         _menu.Items.AddRange([
-            open, new ToolStripSeparator(), _resumeItem, _pauseMenu, _idleMenu, _mediaItem, _openItem, _startupItem, new ToolStripSeparator(),
+            open, new ToolStripSeparator(), _resumeItem, _pauseMenu, _idleMenu, _mediaItem, _macroItem, _openItem, _startupItem, new ToolStripSeparator(),
             new ToolStripMenuItem("Set up browser extension…", null, (_, _) => ExtensionWizard.ShowWizard()),
             new ToolStripMenuItem("Open data folder", null, (_, _) => OpenFolder()),
             _updateItem,
@@ -370,6 +372,7 @@ internal sealed class TrayApp : ApplicationContext
         int idle = _settings.IdleMinutes;
         foreach (ToolStripMenuItem item in _idleMenu.DropDownItems) item.Checked = (int)item.Tag == idle;
         _mediaItem.Checked = _settings.CountMedia;
+        _macroItem.Checked = _settings.IgnoreMacros;
         _openItem.Checked = _settings.TrackOpenTime;
         _startupItem.Checked = _settings.AutoStart;
     }

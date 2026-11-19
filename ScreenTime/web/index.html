@@ -128,9 +128,25 @@ table.data td:last-child,table.data th:last-child{text-align:right;font-variant-
 .row.is-hidden{opacity:.55}
 .row-main{flex:1;display:grid;grid-template-columns:28px 1fr auto;gap:4px 12px;align-items:center;padding:8px 4px 8px 8px;
   cursor:pointer;border:0;background:none;text-align:left;min-width:0;border-radius:9px}
-.row-more{width:30px;border:0;background:none;color:var(--muted);cursor:pointer;border-radius:7px;font-size:16px;letter-spacing:1px;flex:none;opacity:.6}
-.row:hover .row-more,.row-more:focus-visible,.row-more[aria-expanded="true"]{opacity:1}
-.row-more:hover{color:var(--ink);background:var(--hover)}
+.row-more{width:32px;border:0;background:none;color:var(--ink2);cursor:pointer;border-radius:7px;flex:none;display:grid;place-items:center}
+.row-more svg{width:18px;height:18px;fill:currentColor}
+.row-more:hover,.row-more[aria-expanded="true"]{color:var(--ink);background:var(--hover)}
+.row.renaming .row-main,.row.renaming .row-more{display:none}
+.rn-inline{flex:1;display:flex;align-items:center;gap:10px;padding:8px 8px;min-width:0}
+.rn-inline input{flex:1;min-width:0;background:var(--plane);border:1px solid var(--accent);border-radius:7px;padding:6px 9px;font-weight:560}
+.rn-inline small{color:var(--muted);font-size:12px;white-space:nowrap}
+.list-note{display:flex;align-items:center;gap:8px 10px;flex-wrap:wrap;padding:8px 10px;margin:0 0 8px;border-radius:9px;font-size:13px;
+  background:var(--accent-wash);border:1px solid color-mix(in srgb,var(--accent) 35%,var(--border))}
+.list-note .msg{flex:1;min-width:160px}
+.list-note .acts{display:flex;gap:6px;flex-wrap:wrap}
+.list-note .btn{padding:4px 10px}
+.list-note small{color:var(--muted)}
+.pick{display:flex;flex-direction:column;max-height:260px;overflow:auto;border:1px solid var(--border);border-radius:8px;margin:8px 0 4px}
+.pick label{display:flex!important;gap:10px;align-items:center;font-weight:400!important;margin:0!important;padding:6px 10px;cursor:pointer}
+.pick label:hover{background:var(--hover)}
+.pick input{width:16px;height:16px;flex:none}
+.pick small{color:var(--muted)}
+.pick .none{padding:8px 10px;color:var(--muted)}
 .ico{width:28px;height:28px;border-radius:7px;display:grid;place-items:center;background:var(--track);color:var(--ink2);
   font-weight:650;font-size:13px;grid-row:span 2;overflow:hidden}
 .ico img{width:22px;height:22px;object-fit:contain}
@@ -344,12 +360,15 @@ kbd{font:11px var(--font);border:1px solid var(--border);border-bottom-width:2px
       <div class="card-head"><h2>Apps</h2><span class="meta" id="appsMeta"></span><span class="spacer"></span>
         <button class="link-btn" id="appsSort" hidden></button>
         <input class="search" id="appSearch" type="search" placeholder="Search apps" aria-label="Search apps"></div>
+      <div class="list-note" id="appsSuggest" hidden></div>
+      <div class="list-note" id="appsNote" hidden></div>
       <div class="rows" id="apps"></div>
     </div>
     <div class="card">
       <div class="card-head"><h2>Websites</h2><span class="meta" id="sitesMeta"></span><span class="spacer"></span>
         <button class="link-btn" id="sitesSort" hidden></button>
         <input class="search" id="siteSearch" type="search" placeholder="Search websites" aria-label="Search websites"></div>
+      <div class="list-note" id="sitesNote" hidden></div>
       <div class="rows" id="sites"></div>
     </div>
   </section>
@@ -485,6 +504,7 @@ function prevLabel() {
 // ---- data ----
 let loadSeq = 0;
 async function load(quiet) {
+  if (quiet && state.renaming) return;   // a background refresh would wipe out a name being typed
   if (state.preset !== 'custom' && state.preset !== 'range') [state.from, state.to] = presetRange(state.preset);
   const seq = ++loadSeq;
   const q = new URLSearchParams({ from: state.from, to: state.to });
@@ -518,7 +538,7 @@ async function loadNow() {
     if (n.state === 'active' || n.state === 'media') {
       text.innerHTML = n.app ? `Now: <b>${esc(n.app)}</b>${n.site ? ' · ' + esc(n.site) : ''}${n.state === 'media' ? ' (playing)' : ''}` : 'Tracking';
     } else {
-      text.textContent = { idle: 'Idle: not counting', paused: pausedText(n.pausedUntil), locked: 'PC locked' }[n.state] || n.state;
+      text.textContent = { idle: 'Idle: not counting', macro: 'Autoclicker or macro detected: only your own input counts', paused: pausedText(n.pausedUntil), locked: 'PC locked' }[n.state] || n.state;
     }
     // The app was updated while this page was open: load the new dashboard.
     if (state.version && n.version && n.version !== state.version) { location.reload(); return; }
@@ -927,7 +947,44 @@ function renderAll() {
 
 function limitFor(kind, id) { return state.limits.find(l => l.kind === kind && l.id === id); }
 
+let nameClickTimer = 0;
+
+/** Rename in place: Enter or clicking away saves, Esc cancels, an empty name goes back to the detected one. */
+function startRename(row, kind, item) {
+  const k = kind === 'apps' ? 'app' : 'site';
+  const name = k === 'app' ? item.name : item.domain, original = item.original || name;
+  const box = document.createElement('div');
+  box.className = 'rn-inline';
+  box.innerHTML = `<input type="text" maxlength="80" aria-label="New name for ${esc(name)}" placeholder="${esc(original)}"><small>Enter to save · Esc to cancel</small>`;
+  const input = box.querySelector('input');
+  input.value = name;
+  row.classList.add('renaming');
+  row.prepend(box);
+  state.renaming = true;
+  input.focus();
+  input.select();
+  let done = false;
+  const finish = async save => {
+    if (done) return;
+    done = true;
+    state.renaming = false;
+    const v = input.value.trim();
+    if (save && v !== name) {
+      try { await itemAction(k, item.id, 'rename', v === original ? '' : v); return; }
+      catch (e) { alertBox('Something went wrong', e.message); }
+    }
+    row.classList.remove('renaming');
+    box.remove();
+  };
+  input.onkeydown = e => {
+    if (e.key === 'Enter') { e.preventDefault(); finish(true); }
+    else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); finish(false); }
+  };
+  input.onblur = () => finish(true);
+}
+
 function renderList(kind, items, query) {
+  state.renaming = false;   // a re-render replaces any rename box
   const el = $(kind), total = items.reduce((a, x) => a + x.ms, 0);
   const k = kind === 'apps' ? 'app' : 'site';
   const label = x => kind === 'apps' ? x.name : x.domain;
@@ -958,24 +1015,30 @@ function renderList(kind, items, query) {
     const src = kind === 'apps' ? `/icon/app/${x.id}` : (x.icon || '');
     const img = src ? `<img src="${esc(src)}" alt="" loading="lazy" referrerpolicy="no-referrer" data-letter="${letter}">` : letter;
     const lim = limitFor(k, x.id);
-    const title = [x.path || name, hasOpen ? `Used ${fmtDur(x.ms)} · open ${fmtDur(x.openMs || 0)}` : '', x.original ? `Originally: ${x.original}` : '', x.merged ? 'Includes: ' + x.merged.map(m => m.name).join(', ') : ''].filter(Boolean).join('\n');
+    const title = [x.path || name, hasOpen ? `Used ${fmtDur(x.ms)} · open ${fmtDur(x.openMs || 0)}` : '', x.original ? `Originally: ${x.original}` : '', x.merged ? 'Includes: ' + x.merged.map(m => m.name).join(', ') : '', 'Double-click the name to rename'].filter(Boolean).join('\n');
     return `<div class="row${x.id === sel ? ' sel' : ''}${x.hidden ? ' is-hidden' : ''}" data-id="${x.id}">
       <button class="row-main" title="${esc(title)}">
         <span class="ico">${img}</span>
-        <span class="name">${esc(name)}${x.hint ? `<span class="hint">${esc(x.hint)}</span>` : ''}${x.merged ? `<span class="badge">+${x.merged.length}</span>` : ''}${x.hidden ? '<span class="badge">hidden</span>' : ''}${lim ? `<span class="badge" title="Daily limit">⏱ ${fmtDur(lim.minutes * M)}</span>` : ''}</span>
+        <span class="name"><span class="nm">${esc(name)}</span>${x.hint ? `<span class="hint">${esc(x.hint)}</span>` : ''}${x.merged ? `<span class="badge">+${x.merged.length}</span>` : ''}${x.hidden ? '<span class="badge">hidden</span>' : ''}${lim ? `<span class="badge" title="Daily limit">⏱ ${fmtDur(lim.minutes * M)}</span>` : ''}</span>
         <span class="time">${fmtDur(x.ms)}</span>
         <span class="barline"><span class="track">${hasOpen && x.openMs ? `<span class="fill open" style="width:${(x.openMs / top * 100).toFixed(1)}%"></span>` : ''}<span class="fill" style="width:${(x.ms / top * 100).toFixed(1)}%"></span></span>
         ${hasOpen ? `<span class="openlbl">${x.openMs ? 'open ' + fmtDur(x.openMs) : 'not open'}</span>` : ''}
         <span class="pct">${total ? Math.round(x.ms / total * 100) : 0}%</span></span>
       </button>
-      <button class="row-more" aria-label="More options for ${esc(name)}" aria-haspopup="menu" aria-expanded="false">⋯</button>
+      <button class="row-more" aria-label="More options for ${esc(name)}" aria-haspopup="menu" aria-expanded="false" title="More options"><svg viewBox="0 0 18 18" aria-hidden="true"><circle cx="3.5" cy="9" r="2"/><circle cx="9" cy="9" r="2"/><circle cx="14.5" cy="9" r="2"/></svg></button>
     </div>`;
   }).join('') + (list.length > limit ? `<button class="link-btn more" data-more>Show all ${list.length}</button>` : '');
 
   el.querySelectorAll('img').forEach(i => i.addEventListener('error', () => { i.parentNode.textContent = i.dataset.letter; }, { once: true }));
   el.querySelectorAll('.row').forEach(r => {
     const item = list.find(x => x.id === +r.dataset.id);
-    r.querySelector('.row-main').onclick = () => toggleFilter(k, item.id, label(item));
+    r.querySelector('.row-main').onclick = e => {
+      // A click on the name waits a moment, so a double-click (rename) doesn't also toggle the chart filter.
+      clearTimeout(nameClickTimer);
+      if (!e.target.closest('.nm')) return toggleFilter(k, item.id, label(item));
+      if (e.detail === 1) nameClickTimer = setTimeout(() => toggleFilter(k, item.id, label(item)), 250);
+    };
+    r.querySelector('.nm').ondblclick = () => { clearTimeout(nameClickTimer); startRename(r, kind, item); };
     r.querySelector('.row-more').onclick = e => openItemMenu(e.currentTarget, k, item);
   });
   const more = el.querySelector('[data-more]');
@@ -1021,7 +1084,7 @@ function showMenu(anchor, entries) {
   openMenuEl = { menu: m, anchor };
   m.querySelector('button')?.focus();
 }
-document.addEventListener('click', e => { if (openMenuEl && !openMenuEl.menu.contains(e.target) && e.target !== openMenuEl.anchor) closeMenu(); });
+document.addEventListener('click', e => { if (openMenuEl && !openMenuEl.menu.contains(e.target) && !openMenuEl.anchor.contains(e.target)) closeMenu(); });
 window.addEventListener('scroll', closeMenu, { passive: true });
 window.addEventListener('resize', closeMenu);
 
@@ -1034,13 +1097,17 @@ function openItemMenu(anchor, kind, item) {
     { label: filtered ? 'Stop showing in chart' : 'Show in chart', run: () => toggleFilter(kind, item.id, name) },
     { label: 'Rename…', run: () => renameItem(kind, item) },
     { label: lim ? `Daily limit: ${fmtDur(lim.minutes * M)}…` : 'Set daily limit…', run: () => editLimit(kind, item.id, name) },
-    { label: kind === 'app' ? 'Merge into another app…' : 'Merge into another website…', run: () => mergeItem(kind, item) },
+    { label: kind === 'app' ? 'Merge with other apps…' : 'Merge with other websites…', run: () => mergeItem(kind, item.id) },
   ];
   if (item.merged) {
     entries.push('-', { note: 'Merged into this one:' });
     for (const m of item.merged) entries.push({ label: `Separate “${m.name}”`, run: () => itemMenuAction(kind, m.id, 'unmerge') });
   }
-  entries.push('-', { label: item.hidden ? 'Unhide' : 'Hide from stats', run: () => itemMenuAction(kind, item.id, item.hidden ? 'unhide' : 'hide') });
+  entries.push('-', item.hidden
+    ? { label: 'Unhide', run: () => itemMenuAction(kind, item.id, 'unhide') }
+    : { label: 'Hide from stats', run: () => itemAction(kind, item.id, 'hide')
+          .then(() => showNote(kind, `Hid “${esc(name)}”.`, () => itemAction(kind, item.id, 'unhide')))
+          .catch(e => alertBox('Something went wrong', e.message)) });
   showMenu(anchor, entries);
 }
 
@@ -1049,6 +1116,65 @@ async function itemAction(kind, id, action, value) {
   await api.post('/api/item', { kind, id, action, value });
   if ((action === 'merge' || action === 'hide') && state.filter && state.filter.kind === kind && state.filter.id === id) state.filter = null;
   load();
+  if (kind === 'app') loadSuggest();
+}
+
+// ---- undo note: shown above the list (never on top of anything) for 15 s after a merge or hide ----
+let noteTimer = 0;
+function showNote(kind, html, undo) {
+  for (const id of ['appsNote', 'sitesNote']) $(id).hidden = true;
+  const el = $(kind === 'app' ? 'appsNote' : 'sitesNote');
+  el.innerHTML = `<span class="msg">${html}</span><span class="acts"><button type="button" class="btn" data-undo>Undo</button><button type="button" class="btn" data-x aria-label="Close">✕</button></span>`;
+  el.hidden = false;
+  el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  clearTimeout(noteTimer);
+  const close = () => { clearTimeout(noteTimer); el.hidden = true; };
+  noteTimer = setTimeout(close, 15000);
+  el.querySelector('[data-x]').onclick = close;
+  el.querySelector('[data-undo]').onclick = async () => {
+    close();
+    try { await undo(); } catch (e) { alertBox('Couldn’t undo', e.message); }
+  };
+}
+
+// ---- merge suggestions: apps whose names match once versions, "setup", "x64" etc. are ignored ----
+const normName = s => s.toLowerCase().replace(/\.(exe|tmp)$/, '').replace(/[_\-.()]+/g, ' ')
+  .replace(/\b(v?\d+|setup|installer|install|uninstall|updater|portable|x64|x86|win64|win32|64bit)\b/g, ' ').replace(/[^a-z0-9]/g, '');
+const groupKey = g => g.map(i => i.id).sort((a, b) => a - b).join(',');
+// shortcut: "not the same" answers live in this browser's storage, so another browser asks again; move to the app's settings if that matters.
+const notSame = () => new Set((ls.get('st.notSame') || '').split(' ').filter(Boolean));
+let suggestions = [], suggestOff = false;
+
+async function loadSuggest() {
+  let items;
+  try { items = await api.get('/api/items?kind=app'); } catch { return; }
+  const by = new Map(), skip = notSame();
+  for (const i of items) {
+    if (i.hidden) continue;
+    const k = normName(i.name);
+    if (k.length < 3) continue;
+    if (!by.has(k)) by.set(k, []);
+    by.get(k).push(i);
+  }
+  suggestions = [...by.values()].filter(g => g.length > 1 && !skip.has(groupKey(g)));
+  renderSuggest();
+}
+
+function renderSuggest() {
+  const el = $('appsSuggest'), g = suggestions[0];
+  el.hidden = suggestOff || !g;
+  if (el.hidden) return;
+  // Shortest name first (usually the real app, not an installer); ties go to the newest entry.
+  g.sort((a, b) => a.name.length - b.name.length || b.id - a.id);
+  const nm = i => `<b>${esc(i.name)}</b>${i.hint ? ` <small>(${esc(i.hint)})</small>` : ''}`;
+  el.innerHTML = `<span class="msg">These look like the same app: ${g.slice(0, 3).map(nm).join(', ')}${g.length > 3 ? ` and ${g.length - 3} more` : ''}${suggestions.length > 1 ? ` <small>· 1 of ${suggestions.length}</small>` : ''}</span>
+    <span class="acts"><button type="button" class="btn primary" data-m>Merge…</button><button type="button" class="btn" data-n>Not the same</button><button type="button" class="btn" data-l>Not now</button></span>`;
+  el.querySelector('[data-m]').onclick = () => mergeItem('app', g[0].id, g.slice(1).map(i => i.id));
+  el.querySelector('[data-n]').onclick = () => {
+    const s = notSame(); s.add(groupKey(g)); ls.set('st.notSame', [...s].join(' '));
+    suggestions.shift(); renderSuggest();
+  };
+  el.querySelector('[data-l]').onclick = () => { suggestOff = true; renderSuggest(); };
 }
 const itemMenuAction = (...args) => itemAction(...args).catch(e => alertBox('Something went wrong', e.message));
 
@@ -1115,20 +1241,77 @@ async function renameItem(kind, item) {
   });
 }
 
-async function mergeItem(kind, item) {
+/** Pick any number of apps (or sites) that are the same as this one, and which name to show them under. */
+async function mergeItem(kind, id, preset = []) {
   let items;
   try { items = await api.get('/api/items?kind=' + kind); } catch (e) { return alertBox('Something went wrong', e.message); }
-  const others = items.filter(i => i.id !== item.id);
-  if (!others.length) return alertBox('Nothing to merge with', `There's no other ${kind === 'app' ? 'app' : 'website'} yet.`);
-  const name = kind === 'app' ? item.name : item.domain;
-  await openDialog({
-    title: `Merge “${name}”`,
-    body: `<p>Combines its time with another ${kind === 'app' ? 'app' : 'website'} everywhere in the dashboard, for example when one app shows up twice. Nothing is deleted, and you can separate them again from the <b>⋯</b> menu.</p>
-           <label for="mt">Merge into</label><select id="mt">${others.map(o => `<option value="${o.id}">${esc(o.name)}${o.hint ? ' — ' + esc(o.hint) : ''}${o.hidden ? ' (hidden)' : ''}</option>`).join('')}</select>`,
+  const self = items.find(i => i.id === id);
+  if (!self) return alertBox('Something went wrong', 'That item was merged or removed. Refresh and try again.');
+  const others = items.filter(i => i.id !== id);
+  const noun = kind === 'app' ? 'app' : 'website';
+  if (!others.length) return alertBox('Nothing to merge with', `There's no other ${noun} yet.`);
+  const picked = new Set(preset.filter(p => others.some(o => o.id === p)));
+  others.sort((a, b) => picked.has(b.id) - picked.has(a.id));   // suggested ones on top, once (rows don't jump while ticking)
+  const label = i => esc(i.name) + (i.hint ? ` <small>${esc(i.hint)}</small>` : '') + (i.hidden ? ' <small>(hidden)</small>' : '');
+  const optLabel = i => esc(i.name) + (i.hint ? ' — ' + esc(i.hint) : '');
+
+  const renderPick = () => {
+    const q = $('mq').value.trim().toLowerCase();
+    const rows = others.filter(o => picked.has(o.id) || !q || (o.name + ' ' + (o.hint || '')).toLowerCase().includes(q));
+    $('mlist').innerHTML = rows.length
+      ? rows.map(o => `<label><input type="checkbox" value="${o.id}"${picked.has(o.id) ? ' checked' : ''}> <span>${label(o)}</span></label>`).join('')
+      : `<div class="none">No ${noun}s match.</div>`;
+    $('mlist').querySelectorAll('input').forEach(c => c.onchange = () => { c.checked ? picked.add(+c.value) : picked.delete(+c.value); renderTarget(); });
+  };
+  const renderTarget = () => {
+    const sel = $('mt'), keep = +sel.value;
+    const opts = [self, ...others.filter(o => picked.has(o.id))];
+    sel.innerHTML = opts.map(o => `<option value="${o.id}">${optLabel(o)}</option>`).join('');
+    sel.value = opts.some(o => o.id === keep) ? keep : self.id;
+    $('mcount').textContent = picked.size ? `${picked.size + 1} ${noun}s will show as one.` : `Tick at least one ${noun}.`;
+  };
+
+  const dlg = openDialog({
+    title: `Merge “${self.name}”`,
+    body: `<p>Tick the ${noun}s that are really the same as <b>${esc(self.name)}</b>. Their time is added together everywhere in the dashboard. Nothing is deleted, and you can separate them again from the <b>⋯</b> menu.</p>
+           <input type="text" id="mq" placeholder="Search ${noun}s" aria-label="Search ${noun}s">
+           <div class="pick" id="mlist" role="group" aria-label="${noun}s to merge"></div>
+           <p id="mcount" style="margin:4px 0 0"></p>
+           <label for="mt">Show them as</label><select id="mt"></select>`,
     actions: [
-      { label: 'Merge', primary: true, run: guarded(() => itemAction(kind, item.id, 'merge', +$('mt').value)) },
+      { label: 'Merge', primary: true, run: guarded(async () => {
+        if (!picked.size) throw new Error(`Tick at least one ${noun} to merge with.`);
+        const target = +$('mt').value, ids = [self.id, ...picked].filter(i => i !== target);
+        await mergeIds(kind, ids, target, items);
+      }) },
       { label: 'Cancel' },
     ],
+  });
+  $('mq').oninput = renderPick;
+  $('mq').onkeydown = e => { if (e.key === 'Enter') e.preventDefault(); };   // Enter in the search box shouldn't merge
+  renderPick();
+  renderTarget();
+  return dlg;
+}
+
+/** Merges ids into target and offers Undo, which also puts back whatever was merged into each of them before. */
+async function mergeIds(kind, ids, target, items) {
+  const before = ids.map(id => ({ id, kids: items.find(i => i.id === id)?.kids || [] }));
+  try {
+    for (const id of ids) await api.post('/api/item', { kind, id, action: 'merge', value: target });
+  } finally {
+    if (state.filter && state.filter.kind === kind && ids.includes(state.filter.id)) state.filter = null;
+    load();
+    if (kind === 'app') loadSuggest();
+  }
+  const tName = items.find(i => i.id === target)?.name || '';
+  showNote(kind, `Merged ${ids.length + 1} ${kind === 'app' ? 'apps' : 'websites'} into “${esc(tName)}”.`, async () => {
+    try {
+      for (const b of before) {
+        await api.post('/api/item', { kind, id: b.id, action: 'unmerge' });
+        for (const k of b.kids) await api.post('/api/item', { kind, id: k, action: 'merge', value: b.id });
+      }
+    } finally { load(); if (kind === 'app') loadSuggest(); }
   });
 }
 
@@ -1228,6 +1411,8 @@ async function openSettings() {
         <span><b>Track open time</b><small>Next to how long you use an app or website, also record how long it's open: an app with any window open, a website with any tab open. Turn this off to only track usage.</small></span></label>
       <label class="setting"><input type="checkbox" id="sMedia"${st.countMedia ? ' checked' : ''}>
         <span><b>Keep counting while the app plays sound</b><small>Watching a video or sitting on a call without touching the mouse still counts as usage.</small></span></label>
+      <label class="setting"><input type="checkbox" id="sMacro"${st.ignoreMacros ? ' checked' : ''}>
+        <span><b>Don't count autoclickers and macros</b><small>Clicks and key presses sent by a program (an autoclicker, TinyTask, a macro) don't keep you “active”, so AFK grinding doesn't count as usage. Only your own mouse and keyboard do. Remote-control apps (AnyDesk, Steam Input) send input the same way, so turn this off if you control this PC that way.</small></span></label>
       <label class="setting"><input type="checkbox" id="sAuto"${st.autoStart ? ' checked' : ''}>
         <span><b>Start with Windows</b><small>Start tracking automatically when you sign in.</small></span></label>
       <label for="sIdle">Idle timeout</label>
@@ -1260,6 +1445,7 @@ async function openSettings() {
   };
   $('sOpen').onchange = e => save({ trackOpen: e.target.checked });
   $('sMedia').onchange = e => save({ countMedia: e.target.checked });
+  $('sMacro').onchange = e => save({ ignoreMacros: e.target.checked });
   $('sAuto').onchange = e => save({ autoStart: e.target.checked });
   $('sIdle').onchange = e => save({ idleMinutes: +e.target.value });
   $('sUpdCheck').onchange = e => { $('sUpdHours').disabled = !e.target.checked; save({ updateCheck: e.target.checked }); };
@@ -1463,6 +1649,7 @@ setInterval(() => { if (!document.hidden) loadNow(); }, 5000);
 setInterval(() => { if (!document.hidden && state.to >= todayInt() && !$('dlg').open) load(true); }, 30000);
 
 loadNow().then(() => setPreset(state.preset));
+loadSuggest();
 </script>
 </body>
 </html>

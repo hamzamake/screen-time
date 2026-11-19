@@ -650,6 +650,8 @@ internal sealed partial class Db : IDisposable
                 .OrderBy(i => i.Display, StringComparer.OrdinalIgnoreCase).ToList();
             var dup = new HashSet<string>(items.GroupBy(i => i.Display, StringComparer.OrdinalIgnoreCase).Where(g => g.Count() > 1).Select(g => g.Key),
                 StringComparer.OrdinalIgnoreCase);
+            // Direct children are the whole group (merges stay one level deep); the dashboard needs them to undo a merge.
+            var kids = (site ? _sites : _apps).Values.Where(i => i.MergedInto > 0).ToLookup(i => i.MergedInto, i => i.Id);
             w.WriteStartArray();
             foreach (var i in items)
             {
@@ -658,6 +660,12 @@ internal sealed partial class Db : IDisposable
                 w.WriteString("name", i.Display);
                 if (!site && dup.Contains(i.Display)) w.WriteString("hint", FolderHint(i.Path) ?? i.Exe);
                 if (i.Hidden) w.WriteBoolean("hidden", true);
+                if (kids.Contains(i.Id))
+                {
+                    w.WriteStartArray("kids");
+                    foreach (int k in kids[i.Id]) w.WriteNumberValue(k);
+                    w.WriteEndArray();
+                }
                 w.WriteEndObject();
             }
             w.WriteEndArray();

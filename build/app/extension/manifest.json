@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Screen Time Connector",
-  "version": "1.4.3",
+  "version": "1.4.4",
   "description": "Tells the Screen Time desktop app which website you're on, so it can track time per site.",
   "permissions": ["tabs", "alarms", "storage"],
   "host_permissions": ["http://127.0.0.1:47321/*"],

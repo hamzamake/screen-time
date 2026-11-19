@@ -539,6 +539,7 @@ internal sealed class WebServer
         w.WriteBoolean("trackOpen", _settings.TrackOpenTime);
         w.WriteNumber("idleMinutes", _settings.IdleMinutes);
         w.WriteBoolean("countMedia", _settings.CountMedia);
+        w.WriteBoolean("ignoreMacros", _settings.IgnoreMacros);
         w.WriteBoolean("autoStart", _settings.AutoStart);
         w.WriteBoolean("updateCheck", _settings.UpdateCheck);
         w.WriteNumber("updateHours", _settings.UpdateHours);
@@ -558,6 +559,7 @@ internal sealed class WebServer
             var r = doc.RootElement;
             if (r.TryGetProperty("trackOpen", out var v) && v.ValueKind is JsonValueKind.True or JsonValueKind.False) _settings.TrackOpenTime = v.GetBoolean();
             if (r.TryGetProperty("countMedia", out v) && v.ValueKind is JsonValueKind.True or JsonValueKind.False) _settings.CountMedia = v.GetBoolean();
+            if (r.TryGetProperty("ignoreMacros", out v) && v.ValueKind is JsonValueKind.True or JsonValueKind.False) _settings.IgnoreMacros = v.GetBoolean();
             if (r.TryGetProperty("autoStart", out v) && v.ValueKind is JsonValueKind.True or JsonValueKind.False) _settings.AutoStart = v.GetBoolean();
             if (r.TryGetProperty("updateCheck", out v) && v.ValueKind is JsonValueKind.True or JsonValueKind.False) _settings.UpdateCheck = v.GetBoolean();
             if (r.TryGetProperty("updateHours", out v) && v.ValueKind == JsonValueKind.Number) _settings.UpdateHours = v.GetInt32();

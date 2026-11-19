@@ -12,11 +12,11 @@ using System.Reflection;
 
 [assembly: System.Reflection.AssemblyCompanyAttribute("ScreenTime")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
-[assembly: System.Reflection.AssemblyFileVersionAttribute("1.4.3.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.4.3+7666dfff3842ad0efbca22783a9d58ed78d0af4c")]
+[assembly: System.Reflection.AssemblyFileVersionAttribute("1.4.4.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.4.4+3183178bd3b4c8cac539054dcaea41ef678a64cb")]
 [assembly: System.Reflection.AssemblyProductAttribute("Screen Time")]
 [assembly: System.Reflection.AssemblyTitleAttribute("ScreenTime")]
-[assembly: System.Reflection.AssemblyVersionAttribute("1.4.3.0")]
+[assembly: System.Reflection.AssemblyVersionAttribute("1.4.4.0")]
 [assembly: System.Runtime.Versioning.TargetPlatformAttribute("Windows7.0")]
 [assembly: System.Runtime.Versioning.SupportedOSPlatformAttribute("Windows7.0")]
 

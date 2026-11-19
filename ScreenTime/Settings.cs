@@ -24,6 +24,7 @@ internal sealed class Settings
         _tracker.IdleTimeoutMs = (int.TryParse(db.GetMeta("idle_minutes"), out int m) && m > 0 ? m : 5) * 60_000;
         _tracker.CountMedia = db.GetMeta("count_media") != "0";
         _tracker.TrackOpenTime = db.GetMeta("track_open") != "0";
+        if (db.GetMeta("ignore_macros") != "0") IgnoreMacros = true;
     }
 
     public int IdleMinutes
@@ -49,6 +50,19 @@ internal sealed class Settings
     {
         get => _tracker.TrackOpenTime;
         set { _tracker.TrackOpenTime = value; _db.SetMeta("track_open", value ? "1" : "0"); Changed?.Invoke(); }
+    }
+
+    /// <summary>Autoclickers and macros (TinyTask etc.) don't keep you "active"; only your own input does.</summary>
+    public bool IgnoreMacros
+    {
+        get => _tracker.IgnoreMacros;
+        set
+        {
+            if (value) InputWatch.Start(); else InputWatch.Stop();
+            _tracker.IgnoreMacros = value;
+            _db.SetMeta("ignore_macros", value ? "1" : "0");
+            Changed?.Invoke();
+        }
     }
 
     // ---- updates (see Updater) ----
